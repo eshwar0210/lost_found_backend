@@ -20,7 +20,7 @@ const uploadProfilePhoto = async (file) => {
 };
 
 exports.registerUser = async (req, res) => {
-    let { email, whatsappNumber, password, hostelName } = JSON.parse(req.body.userData); // Parse userData from req.body
+    let { email, whatsappNumber, password, hostelName ,name} = JSON.parse(req.body.userData); // Parse userData from req.body
     let profilePhotoURL = null;
 
     try {
@@ -42,6 +42,7 @@ exports.registerUser = async (req, res) => {
         const newUser = new User({
             uid,
             email,
+            name,
             whatsappNumber,
             hostelName,
             profilePhotoUrl: profilePhotoURL || null, // Default to null if no photo
