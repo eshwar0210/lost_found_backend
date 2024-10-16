@@ -18,7 +18,7 @@ const postSchema = new mongoose.Schema({
     },
     imageUrls: {
         type: [String], // Array of strings for image URLs
-        required: true,
+      
     },
     uid: {
         type: String,

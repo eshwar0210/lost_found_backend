@@ -29,17 +29,19 @@ exports.createPost = async (req, res) => {
 
         const { location, postType, description, uid } = req.body; // Get post data from request body
 
+        let imageUrls = [];
         // Check if files are uploaded
-        if (!req.files || req.files.length === 0) {
-            return res.status(400).json({ message: 'No images uploaded' });
-        }
+        
 
         // Log the received files and body for debugging
         // console.log("Uploaded files:", req.files);
         // console.log("Request body:", req.body);
 
         // Upload images to Firebase Storage
-        const imageUrls = await uploadImages(req.files);
+        if(req.files){
+            imageUrls = await uploadImages(req.files);
+        }
+        
         // console.log("Uploaded Image URLs:", imageUrls);
 
         // Create a new post document
