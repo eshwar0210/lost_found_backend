@@ -63,3 +63,25 @@ exports.registerUser = async (req, res) => {
         res.status(500).json({ error: 'Registration failed' });
     }
 };
+
+
+exports.getUser = async (req, res) => {
+
+    try {
+
+        const id = req.params.id;
+
+        const user = await User.findOne({ uid: id });
+
+        if (!user) {
+            return res.status(404).json({ message: 'User not found' });
+        }
+
+        // Respond with the found user
+        res.status(200).json(user);
+    } catch (error) {
+        console.error('Error finding user:', error);
+        res.status(500).json({ message: 'Server error' });
+    }
+
+};
