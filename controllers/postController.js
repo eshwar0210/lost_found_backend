@@ -25,7 +25,7 @@ const uploadImages = async (files) => {
 
 exports.createPost = async (req, res) => {
     try {
-        console.log("API endpoint triggered");
+        console.log("API for creating post triggered");
 
         const { location, postType, description, uid } = req.body; // Get post data from request body
 
@@ -66,7 +66,7 @@ exports.createPost = async (req, res) => {
 };
 
 
-// In your posts controller
+
 exports.getAllPosts = async (req, res) => {
     try {
         const posts = await Post.find(); // Fetch all posts from the database
@@ -77,3 +77,29 @@ exports.getAllPosts = async (req, res) => {
     }
 };
 
+exports.addComment = async (req, res) => {
+    const { postId } = req.params;
+    const { userId, userName, comment } = req.body;
+    try {
+        const post = await Post.findById(postId);
+
+        if (!post) {
+            return res.status(404).json({ error: 'Post not found.' });
+        }
+
+        const newComment = {
+            userId,
+            userName,
+            comment,
+        };
+
+        post.comments.push(newComment); // Add the comment to the post's comment array
+
+        await post.save(); // Save the updated post
+
+        res.status(200).json({ message: 'Comment added successfully', post });
+    } catch (error) {
+        console.error('Error while adding comment:', error);
+        res.status(500).json({ error: 'Server error while adding comment.' });
+    }
+};
