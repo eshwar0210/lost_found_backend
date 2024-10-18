@@ -196,3 +196,71 @@ exports.deletePost = async (req, res) => {
         res.status(500).json({ message: 'Failed to delete post.' });
     }
 };
+
+
+exports.updateComment = async (req, res) => {
+    const { postId, commentId } = req.params; // Get postId and commentId from the request parameters
+    const { comment: updatedComment } = req.body; // Get the updated comment content from the request body
+   
+
+    try {
+        // Find the post by ID
+        const post = await Post.findById(postId);
+
+        if (!post) {
+            return res.status(404).json({ message: 'Post not found' });
+        }
+
+        // Find the comment by its ID within the post
+        const commentToUpdate = post.comments.id(commentId);
+
+        if (!commentToUpdate) {
+            return res.status(404).json({ message: 'Comment not found' });
+        }
+
+        
+       
+
+        // Update the comment content
+        commentToUpdate.comment = updatedComment;
+
+        // Save the updated post document
+        await post.save();
+
+        res.status(200).json({ message: 'Comment updated successfully', comment: commentToUpdate });
+    } catch (error) {
+        console.error('Error updating comment:', error);
+        res.status(500).json({ message: 'Server error' });
+    }
+};
+
+exports.deleteComment = async (req, res) => {
+    const { postId, commentId } = req.params; // Get postId and commentId from the request parameters
+
+    try {
+        // Find the post by ID
+        const post = await Post.findById(postId);
+
+        if (!post) {
+            return res.status(404).json({ message: 'Post not found' });
+        }
+
+        // Find the comment by its ID within the post's comments array
+        const commentToDelete = post.comments.id(commentId);
+
+        if (!commentToDelete) {
+            return res.status(404).json({ message: 'Comment not found' });
+        }
+
+        // Remove the comment from the comments array
+        post.comments.pull(commentId);
+
+        // Save the updated post document
+        await post.save();
+
+        res.status(200).json({ message: 'Comment deleted successfully' });
+    } catch (error) {
+        console.error('Error deleting comment:', error);
+        res.status(500).json({ message: 'Server error' });
+    }
+};
