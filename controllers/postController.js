@@ -25,14 +25,12 @@ const uploadImages = async (files) => {
 
 exports.createPost = async (req, res) => {
     try {
-        console.log("API for creating post triggered");
+        // console.log("API for creating post triggered");
 
         const { location, postType, description, uid } = req.body; // Get post data from request body
 
         let imageUrls = [];
         // Check if files are uploaded
-        
-
         // Log the received files and body for debugging
         // console.log("Uploaded files:", req.files);
         // console.log("Request body:", req.body);
