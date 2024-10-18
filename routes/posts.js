@@ -13,4 +13,8 @@ const upload = multer({ storage });
 router.post('/', upload.array('images') , createPost);
 router.get('/',postcontroller.getAllPosts);
 router.post('/:postId/comment', postcontroller.addComment);
+router.get('/user/:uid', postcontroller.getPostsByUserId);
+router.put('/:id', postcontroller.updatePost);
+router.delete('/:id',postcontroller.deletePost);
+
 module.exports = router;

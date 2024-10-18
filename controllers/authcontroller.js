@@ -186,3 +186,32 @@ exports.updateHostelInfo = async (req, res) => {
         res.status(500).json({ message: 'Internal server error' });
     }
 };
+
+
+// Submit Survey API
+exports.addnewsurvey = async (req, res) => {
+    const { uid, surveyResponse } = req.body;
+
+    if (!uid || !surveyResponse) {
+        return res.status(400).json({ message: 'UID and survey response are required.' });
+    }
+
+    try {
+        // Find the user by UID
+        const user = await User.findOne({ uid: uid }); // Adjust according to your user identification
+
+        if (!user) {
+            return res.status(404).json({ message: 'User not found.' });
+        }
+
+        // Push the survey response into the user's surveys array
+        user.surveys.push(surveyResponse);
+        await user.save(); // Save the updated user document
+
+        res.status(200).json({ message: 'Survey response submitted successfully!' });
+    } catch (error) {
+        console.error('Error submitting survey:', error);
+        res.status(500).json({ message: 'Failed to submit survey.' });
+    }
+};
+

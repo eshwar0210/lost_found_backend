@@ -28,6 +28,11 @@ const userSchema = new mongoose.Schema({
     type: String, // URL of profile photo stored in Firebase
     default: null, // Optional field
   },
+  surveys: {
+        type: [String], // Array of strings to store survey responses
+        default: [], // Initialize with an empty array
+    },
+    
 }, { timestamps: true }); // Automatically add createdAt and updatedAt fields
 
 module.exports = mongoose.model('User', userSchema);
