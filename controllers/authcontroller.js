@@ -162,3 +162,27 @@ exports.removeProfilePicture = async (req, res) => {
     }
 };
 
+
+
+exports.updateHostelInfo = async (req, res) => {
+    const { uid } = req.params; // Get the uid from the request parameters
+    const { hostel } = req.body; // Get the hostel information from the request body
+
+    try {
+        // Find the user by uid and update the hostelName field
+        const updatedUser = await User.findOneAndUpdate(
+            { uid }, // Find user by uid
+            { hostelName: hostel }, // Update the hostelName
+            { new: true } // Return the updated document
+        );
+
+        if (!updatedUser) {
+            return res.status(404).json({ message: 'User not found' });
+        }
+
+        res.status(200).json({ message: 'Hostel information updated successfully', user: updatedUser });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: 'Internal server error' });
+    }
+};

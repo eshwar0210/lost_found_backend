@@ -12,4 +12,5 @@ router.post('/register', upload.single('profilePhoto') ,authController.registerU
 router.get('/user/:id',authController.getUser);
 router.put('/user/:uid/profile-picture', upload.single('profilePhoto'), authController.updateProfilePicture);
 router.delete('/user/:uid/profile-picture', authController.removeProfilePicture);
+router.put('/user/:uid/hostel', authController.updateHostelInfo);
 module.exports = router;
