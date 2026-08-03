@@ -30,7 +30,6 @@ import CheckIcon from '@mui/icons-material/Check';
 import DoneAllIcon from '@mui/icons-material/DoneAll';
 import ScheduleIcon from '@mui/icons-material/Schedule';
 import Header from './Header';
-import Footer from './footer';
 import { connectSocket, onSocketEvent } from '../services/socket';
 import {
   getConversations,
@@ -65,6 +64,7 @@ const Chat = () => {
 
   const messagesEndRef = useRef(null);
   const inputRef = useRef(null);
+  const messagesBoxRef = useRef(null);
   const deliveredIdsRef = useRef(new Set());
   const readConvsRef = useRef(new Set());
   const sendingRef = useRef(false);
@@ -175,10 +175,16 @@ const Chat = () => {
   useEffect(() => {
     const len = messages.length;
     if (len > prevLenRef.current) {
-      messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+      const last = messages[len - 1];
+      const isOwn = last && last.senderUid === uid;
+      const el = messagesBoxRef.current;
+      const nearBottom = !el || el.scrollHeight - el.scrollTop - el.clientHeight < 150;
+      if (isOwn || nearBottom) {
+        messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+      }
     }
     prevLenRef.current = len;
-  }, [messages]);
+  }, [messages, uid]);
 
   useEffect(() => {
     if (!startOpen) return;
@@ -315,15 +321,15 @@ const Chat = () => {
     <Box sx={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
       <Header />
       <Box sx={{ flexGrow: 1, width: '100%', maxWidth: 'lg', mx: 'auto', px: { xs: 1, sm: 2 } }}>
-        <Box
-          sx={{
-            display: 'flex',
-            gap: { md: 2 },
-            height: 'calc(100dvh - 150px)',
-            minHeight: 480,
-            overflow: 'hidden',
-          }}
-        >
+          <Box
+            sx={{
+              display: 'flex',
+              gap: { md: 2 },
+              height: 'calc(100dvh - 90px)',
+              minHeight: 520,
+              overflow: 'hidden',
+            }}
+          >
           <Box
             sx={{
               width: { xs: '100%', md: 340 },
@@ -543,7 +549,7 @@ const Chat = () => {
                   </Box>
                 </Box>
 
-                <Box sx={{ flexGrow: 1, overflowY: 'auto', px: { xs: 1.5, md: 3 }, py: 2, ...chatBg }}>
+                <Box ref={messagesBoxRef} sx={{ flexGrow: 1, overflowY: 'auto', px: { xs: 1.5, md: 3 }, py: 2, ...chatBg }}>
                   {messages.length === 0 ? (
                     <Typography variant="body2" color="text.secondary" sx={{ textAlign: 'center', py: 6 }}>
                       No messages yet. Say hello!
@@ -673,8 +679,6 @@ const Chat = () => {
           </Box>
         </Box>
       </Box>
-
-      <Footer />
 
       <Dialog open={startOpen} onClose={() => setStartOpen(false)} fullWidth maxWidth="sm">
         <DialogTitle sx={{ fontWeight: 700 }}>Start a New Conversation</DialogTitle>
