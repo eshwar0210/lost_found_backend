@@ -21,3 +21,35 @@ export const formatDate = (dateString) => {
     year: 'numeric',
   });
 };
+
+export const formatMessageTime = (dateString) => {
+  if (!dateString) return '';
+  return new Date(dateString).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+};
+
+export const formatDayLabel = (dateString) => {
+  if (!dateString) return '';
+  const date = new Date(dateString);
+  const today = new Date();
+  const startOfDay = (d) => new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
+  const diffDays = Math.round((startOfDay(today) - startOfDay(date)) / 86400000);
+  if (diffDays === 0) return 'Today';
+  if (diffDays === 1) return 'Yesterday';
+  return date.toLocaleDateString(undefined, { weekday: 'long', month: 'short', day: 'numeric' });
+};
+
+export const formatLastSeen = (dateString) => {
+  if (!dateString) return '';
+  const date = new Date(dateString);
+  const now = Date.now();
+  const diffMs = now - date.getTime();
+  const diffMin = Math.floor(diffMs / 60000);
+  if (diffMin < 1) return 'last seen just now';
+  if (diffMin < 60) return `last seen ${diffMin} min ago`;
+  const diffHours = Math.floor(diffMin / 60);
+  if (diffHours < 24) return `last seen today at ${date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
+  const diffDays = Math.floor(diffHours / 24);
+  if (diffDays === 1) return 'last seen yesterday';
+  if (diffDays < 7) return `last seen ${diffDays} days ago`;
+  return `last seen on ${date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}`;
+};

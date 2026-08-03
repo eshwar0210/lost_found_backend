@@ -17,13 +17,13 @@ import {
 import EmailIcon from '@mui/icons-material/Email';
 import LockIcon from '@mui/icons-material/Lock';
 import PersonIcon from '@mui/icons-material/Person';
-import PhoneIcon from '@mui/icons-material/Phone';
 import AddAPhotoIcon from '@mui/icons-material/AddAPhoto';
 import CloseIcon from '@mui/icons-material/Close';
 import VisibilityIcon from '@mui/icons-material/Visibility';
 import VisibilityOffIcon from '@mui/icons-material/VisibilityOff';
 import { useNavigate } from 'react-router-dom';
 import { getAuth, sendEmailVerification, signInWithEmailAndPassword } from 'firebase/auth';
+import BASE_URL from '../config';
 import { app } from '../firebase';
 import AuthLayout from './AuthLayout';
 
@@ -32,7 +32,6 @@ const Register = () => {
   const theme = useTheme();
   const [email, setEmail] = useState('');
   const [name, setName] = useState('');
-  const [whatsapp, setWhatsapp] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -64,7 +63,6 @@ const Register = () => {
       const userData = {
         email,
         name,
-        whatsappNumber: whatsapp,
         password,
         hostelName: hostel,
       };
@@ -75,7 +73,7 @@ const Register = () => {
         formData.append('profilePhoto', profilePhoto);
       }
 
-      const response = await fetch(`${process.env.REACT_APP_BASE_URL}/auth/register`, {
+      const response = await fetch(`${BASE_URL}/auth/register`, {
         method: 'POST',
         body: formData,
       });
@@ -205,22 +203,6 @@ const Register = () => {
             startAdornment: (
               <InputAdornment position="start">
                 <PersonIcon fontSize="small" />
-              </InputAdornment>
-            ),
-          }}
-        />
-        <TextField
-          label="WhatsApp Number"
-          type="tel"
-          fullWidth
-          margin="normal"
-          value={whatsapp}
-          onChange={(e) => setWhatsapp(e.target.value)}
-          required
-          InputProps={{
-            startAdornment: (
-              <InputAdornment position="start">
-                <PhoneIcon fontSize="small" />
               </InputAdornment>
             ),
           }}

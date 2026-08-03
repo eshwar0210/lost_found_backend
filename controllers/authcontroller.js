@@ -1,26 +1,16 @@
-const { admin, bucket } = require('../firebase'); // Import Firebase admin
+const { admin } = require('../firebase'); // Import Firebase admin (Auth only)
 const User = require('../models/User'); // Import your User model
 const multer = require('multer');
-const { v4: uuid } = require('uuid');
+const { uploadBuffer, deleteImage } = require('../utils/cloudinary');
 
 const upload = multer();
 
 const uploadProfilePhoto = async (file) => {
-    const fileName = `profile-photos/${uuid()}-${file.originalname}`; // Unique filename
-    const storageRef = bucket.file(fileName);
-
-    await storageRef.save(file.buffer, {
-        contentType: file.mimetype,
-        metadata: {
-            firebaseStorageDownloadTokens: uuid(), // Generate a token if needed
-        },
-    });
-    await storageRef.makePublic();
-    return storageRef.publicUrl(); // Return the public URL of the uploaded photo
+    return uploadBuffer(file.buffer, { folder: 'profile-photos', mimetype: file.mimetype });
 };
 
 exports.registerUser = async (req, res) => {
-    let { email, whatsappNumber, password, hostelName, name } = JSON.parse(req.body.userData); // Parse userData from req.body
+    let { email, password, hostelName, name } = JSON.parse(req.body.userData); // Parse userData from req.body
     let profilePhotoURL = null;
 
     try {
@@ -43,7 +33,6 @@ exports.registerUser = async (req, res) => {
             uid,
             email,
             name,
-            whatsappNumber,
             hostelName,
             profilePhotoUrl: profilePhotoURL || null, // Default to null if no photo
         });
@@ -87,23 +76,35 @@ exports.getUser = async (req, res) => {
 
 };
 
-// Function to delete the current profile picture from Firebase
+// Function to delete the current profile picture from Cloudinary
 const deleteCurrentProfilePicture = async (imageUrl) => {
     if (!imageUrl) return; // Skip if there's no image URL
 
-    // Extract the file name from the URL
-    const fileName = decodeURIComponent(imageUrl.split('/').pop().split('?')[0]);
-    const fileRef = bucket.file(fileName);
-
     try {
-        await fileRef.delete(); // Delete file from Firebase Storage
-        console.log(`Profile picture deleted: ${fileName}`);
+        await deleteImage(imageUrl);
+        console.log(`Profile picture deleted: ${imageUrl}`);
     } catch (error) {
         console.error('Error deleting profile picture:', error);
     }
 };
 
 
+
+// Search users by name (case-insensitive); returns a limited list for the directory.
+exports.searchUsers = async (req, res) => {
+    const { q } = req.query;
+    try {
+        const query = q && q.trim() ? { name: { $regex: q.trim(), $options: 'i' } } : {};
+        const users = await User.find(query)
+            .select('uid name profilePhotoUrl email hostelName')
+            .sort({ name: 1 })
+            .limit(30);
+        res.status(200).json(users);
+    } catch (error) {
+        console.error('Error searching users:', error);
+        res.status(500).json({ message: 'Server error' });
+    }
+};
 
 // Function to update profile picture
 exports.updateProfilePicture = async (req, res) => {

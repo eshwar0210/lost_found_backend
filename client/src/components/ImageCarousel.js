@@ -1,33 +1,62 @@
 import React, { useState } from 'react';
-import { Box, IconButton, MobileStepper } from '@mui/material';
+import { Box, IconButton, MobileStepper, Typography } from '@mui/material';
 import KeyboardArrowLeft from '@mui/icons-material/KeyboardArrowLeft';
 import KeyboardArrowRight from '@mui/icons-material/KeyboardArrowRight';
+import BrokenImageIcon from '@mui/icons-material/BrokenImage';
 import { useTheme } from '@mui/material/styles';
 
 const ImageCarousel = ({ images = [], height = 260 }) => {
   const theme = useTheme();
   const [activeStep, setActiveStep] = useState(0);
+  const [failed, setFailed] = useState(false);
   const maxSteps = images.length;
 
-  const handleNext = () => setActiveStep((prev) => (prev + 1) % maxSteps);
-  const handleBack = () => setActiveStep((prev) => (prev - 1 + maxSteps) % maxSteps);
+  const handleNext = () => {
+    setActiveStep((prev) => (prev + 1) % maxSteps);
+    setFailed(false);
+  };
+  const handleBack = () => {
+    setActiveStep((prev) => (prev - 1 + maxSteps) % maxSteps);
+    setFailed(false);
+  };
 
   if (!images || images.length === 0) return null;
 
   return (
     <Box sx={{ position: 'relative', borderRadius: 2, overflow: 'hidden' }}>
-      <img
-        src={images[activeStep]}
-        alt={`Post image ${activeStep + 1}`}
-        style={{
-          width: '100%',
-          height,
-          objectFit: 'contain',
-          backgroundColor: theme.palette.mode === 'light' ? '#f1f5f9' : '#0f172a',
-          display: 'block',
-        }}
-        loading="lazy"
-      />
+      {!failed ? (
+        <img
+          key={images[activeStep]}
+          src={images[activeStep]}
+          alt={`Post image ${activeStep + 1}`}
+          style={{
+            width: '100%',
+            height,
+            objectFit: 'contain',
+            backgroundColor: theme.palette.mode === 'light' ? '#f1f5f9' : '#0f172a',
+            display: 'block',
+          }}
+          loading="lazy"
+          onError={() => setFailed(true)}
+        />
+      ) : (
+        <Box
+          sx={{
+            width: '100%',
+            height,
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: 1,
+            bgcolor: theme.palette.mode === 'light' ? '#f1f5f9' : '#0f172a',
+            color: 'text.secondary',
+          }}
+        >
+          <BrokenImageIcon sx={{ fontSize: 48, opacity: 0.5 }} />
+          <Typography variant="caption">Image unavailable</Typography>
+        </Box>
+      )}
 
       {maxSteps > 1 && (
         <>

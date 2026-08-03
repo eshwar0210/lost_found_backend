@@ -18,7 +18,7 @@ const features = [
   {
     icon: <SearchIcon />,
     title: 'Reunite fast',
-    description: 'Contact owners directly via WhatsApp or email.',
+    description: 'Contact owners via email or in-app messages.',
   },
 ];
 

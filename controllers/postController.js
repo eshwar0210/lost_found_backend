@@ -1,24 +1,13 @@
 const Post = require('../models/Posts');
-const { v4: uuid } = require('uuid');
 const multer = require('multer');
 const upload = multer(); // Use multer for handling file uploads
-const { admin, bucket } = require('../firebase'); // Import Firebase admin and bucket
+const { uploadBuffer, deleteImage } = require('../utils/cloudinary');
+const { createNotification } = require('./notificationController');
 
 // Function to upload multiple images
 const uploadImages = async (files) => {
     const uploadedImageUrls = await Promise.all(files.map(async (file) => {
-        const fileName = `posts/${uuid()}-${file.originalname}`; // Unique filename
-        const storageRef = bucket.file(fileName);
-
-        await storageRef.save(file.buffer, {
-            contentType: file.mimetype,
-            metadata: {
-                firebaseStorageDownloadTokens: uuid(), // Generate a token if needed
-            },
-        });
-
-        await storageRef.makePublic(); // Make the file publicly accessible
-        return storageRef.publicUrl(); // Return the public URL of the uploaded image
+        return uploadBuffer(file.buffer, { folder: 'posts', mimetype: file.mimetype });
     }));
     return uploadedImageUrls;
 };
@@ -75,6 +64,20 @@ exports.getAllPosts = async (req, res) => {
     }
 };
 
+exports.getPostById = async (req, res) => {
+    const { id } = req.params;
+    try {
+        const post = await Post.findById(id);
+        if (!post) {
+            return res.status(404).json({ error: 'Post not found' });
+        }
+        res.status(200).json(post);
+    } catch (error) {
+        console.error('Error fetching post by id:', error);
+        res.status(500).json({ error: 'Server error while fetching post' });
+    }
+};
+
 exports.addComment = async (req, res) => {
     const { postId } = req.params;
     const { userId, userName, comment } = req.body;
@@ -95,7 +98,18 @@ exports.addComment = async (req, res) => {
 
         await post.save(); // Save the updated post
 
-        res.status(200).json({ message: 'Comment added successfully', post });
+        await createNotification({
+            recipientUid: post.uid,
+            fromUid: userId,
+            fromName: userName,
+            type: 'comment',
+            text: comment,
+            postId,
+        });
+
+        const savedComment = post.comments[post.comments.length - 1];
+
+        res.status(200).json({ message: 'Comment added successfully', post, comment: savedComment });
     } catch (error) {
         console.error('Error while adding comment:', error);
         res.status(500).json({ error: 'Server error while adding comment.' });
@@ -115,25 +129,49 @@ exports.getPostsByUserId = async (req, res) => {
 };
 
 exports.updatePost = async (req, res) => {
-
-    // console.log("UPDATE POST TRIGGERED");
     const { description, location, postType } = req.body;
     const { id } = req.params;
 
-    // console.log(req.body);
     try {
-        // Find the post by ID and update its fields
-        const updatedPost = await Post.findByIdAndUpdate(id, {
-            description,
-            location,
-            postType
-        }, { new: true }); // Return the updated post
-
-        if (!updatedPost) {
+        const post = await Post.findById(id);
+        if (!post) {
             return res.status(404).json({ message: 'Post not found' });
         }
 
-        res.status(200).json(updatedPost); // Send the updated post as response
+        // Parse which existing images to keep (client sends a JSON array of URLs)
+        let keepImages = [];
+        if (req.body.keepImages) {
+            try {
+                keepImages = JSON.parse(req.body.keepImages);
+            } catch (e) {
+                keepImages = String(req.body.keepImages).split(',').filter(Boolean);
+            }
+        }
+        // Only allow keeping images that already belong to this post
+        keepImages = keepImages.filter((url) => typeof url === 'string' && post.imageUrls.includes(url));
+
+        // Upload any newly selected images
+        let newImages = [];
+        if (req.files && req.files.length > 0) {
+            newImages = await uploadImages(req.files);
+        }
+
+        // Delete the images the user removed
+        const removed = post.imageUrls.filter((url) => !keepImages.includes(url));
+        await Promise.all(
+            removed.map((url) => deleteImage(url).catch((err) => console.error('Failed to delete image on post update:', url, err.message)))
+        );
+
+        const imageUrls = [...keepImages, ...newImages];
+
+        const updatedPost = await Post.findByIdAndUpdate(id, {
+            description,
+            location,
+            postType,
+            imageUrls,
+        }, { new: true });
+
+        res.status(200).json(updatedPost);
     } catch (error) {
         console.error('Error updating post:', error);
         res.status(500).json({ message: 'Server error', error });
@@ -146,12 +184,8 @@ const deletePostImage = async (imageUrl) => {
     }
 
     try {
-        // Extract the file name from the URL
-        const fileName = decodeURIComponent(imageUrl.split('/').pop().split('?')[0]);
-        const fileRef = bucket.file(fileName); // Get a reference to the file
-
-        await fileRef.delete(); // Attempt to delete the file
-        console.log(`Successfully deleted image: ${fileName}`); // Log success
+        await deleteImage(imageUrl);
+        console.log(`Successfully deleted image: ${imageUrl}`); // Log success
     } catch (error) {
         console.error('Error in deletePostImage:', error);
         throw error; // Re-throw error to be handled in deletePost

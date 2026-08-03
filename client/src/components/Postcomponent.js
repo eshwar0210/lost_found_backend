@@ -14,22 +14,28 @@ import {
   Chip,
   InputAdornment,
   Tooltip,
+  Snackbar,
+  Alert,
   useMediaQuery,
+  useTheme,
 } from '@mui/material';
-import WhatsAppIcon from '@mui/icons-material/WhatsApp';
 import EmailIcon from '@mui/icons-material/Email';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
 import SendIcon from '@mui/icons-material/Send';
 import LocationOnIcon from '@mui/icons-material/LocationOn';
-import ForumIcon from '@mui/icons-material/Forum';
+import ScheduleIcon from '@mui/icons-material/Schedule';
+import ChatBubbleOutlineIcon from '@mui/icons-material/ChatBubbleOutline';
+import ChatBubbleIcon from '@mui/icons-material/ChatBubble';
+import LinkIcon from '@mui/icons-material/Link';
 import ImageCarousel from './ImageCarousel';
 import { timeAgo } from '../utils/format';
+import { useNavigate } from 'react-router-dom';
+import BASE_URL from '../config';
 
 const PostComponent = ({ post }) => {
   const [email, setEmail] = useState('');
   const [name, setName] = useState('');
-  const [whatsapp, setWhatsapp] = useState('');
   const [profilePhoto, setProfilePhoto] = useState(null);
   const [comments, setComments] = useState([]);
   const [newComment, setNewComment] = useState('');
@@ -38,14 +44,14 @@ const PostComponent = ({ post }) => {
   const [loadingUser, setLoadingUser] = useState(true);
   const [editingCommentId, setEditingCommentId] = useState(null);
   const [editedComment, setEditedComment] = useState('');
+  const [shareSnackbar, setShareSnackbar] = useState(false);
 
   useEffect(() => {
     const fetchUser = async () => {
       try {
-        const response = await fetch(`${process.env.REACT_APP_BASE_URL}/auth/user/${post.uid}`);
+        const response = await fetch(`${BASE_URL}/auth/user/${post.uid}`);
         const data = await response.json();
         setProfilePhoto(data.profilePhotoUrl);
-        setWhatsapp(data.whatsappNumber);
         setEmail(data.email);
         setName(data.name);
       } catch (error) {
@@ -65,29 +71,33 @@ const PostComponent = ({ post }) => {
   const handleCommentSubmit = async () => {
     if (newComment.trim() === '') return;
 
-    setCommentLoading(true);
     const userId = localStorage.getItem('uid');
     const userName = localStorage.getItem('name');
+    const tempId = `temp-${Date.now()}`;
 
-    const newCommentObj = { userId, userName, comment: newComment };
-    setComments((prevComments) => [...prevComments, newCommentObj]);
+    const optimistic = { _tempId: tempId, userId, userName, comment: newComment };
+    setComments((prevComments) => [...prevComments, optimistic]);
     setNewComment('');
 
     try {
-      const response = await fetch(`${process.env.REACT_APP_BASE_URL}/post/${post._id}/comment`, {
+      const response = await fetch(`${BASE_URL}/post/${post._id}/comment`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(newCommentObj),
+        body: JSON.stringify({ userId, userName, comment: newComment }),
       });
 
       if (!response.ok) {
         throw new Error('Failed to add comment');
       }
+
+      const data = await response.json();
+      const saved = data.comment;
+      setComments((prevComments) =>
+        prevComments.map((c) => (c._tempId === tempId ? saved : c))
+      );
     } catch (error) {
       console.error('Error adding comment:', error);
-      setComments((prevComments) => prevComments.slice(0, -1));
-    } finally {
-      setCommentLoading(false);
+      setComments((prevComments) => prevComments.filter((c) => c._tempId !== tempId));
     }
   };
 
@@ -96,7 +106,7 @@ const PostComponent = ({ post }) => {
 
     setCommentLoading(true);
     try {
-      const response = await fetch(`${process.env.REACT_APP_BASE_URL}/post/${post._id}/comment/${commentId}`, {
+      const response = await fetch(`${BASE_URL}/post/${post._id}/comment/${commentId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ comment: editedComment }),
@@ -122,7 +132,7 @@ const PostComponent = ({ post }) => {
   const handleDeleteComment = async (commentId) => {
     setCommentLoading(true);
     try {
-      const response = await fetch(`${process.env.REACT_APP_BASE_URL}/post/${post._id}/comment/${commentId}`, {
+      const response = await fetch(`${BASE_URL}/post/${post._id}/comment/${commentId}`, {
         method: 'DELETE',
       });
 
@@ -139,15 +149,49 @@ const PostComponent = ({ post }) => {
   };
 
   const isLost = post.postType === 'lost';
-  const typeColor = isLost ? 'error' : 'success';
   const currentUserId = localStorage.getItem('uid');
   const isSmallScreen = useMediaQuery('(max-width:600px)');
+  const theme = useTheme();
+  const navigate = useNavigate();
+
+  const handleMessage = () => {
+    if (post.uid === currentUserId) return;
+    navigate(`/chat?with=${post.uid}`);
+  };
+
+  const handleShare = async () => {
+    const shareUrl = `${window.location.origin}/post/${post._id}`;
+    try {
+      await navigator.clipboard.writeText(shareUrl);
+    } catch (error) {
+      console.error('Clipboard copy failed:', error);
+    }
+    setShareSnackbar(true);
+  };
 
   return (
-    <Card sx={{ mb: 3, p: { xs: 2, sm: 3 }, overflow: 'hidden' }}>
+    <Card
+      sx={{
+        mb: 3,
+        p: { xs: 2, sm: 3 },
+        overflow: 'hidden',
+        transition: 'box-shadow .2s ease, transform .2s ease',
+        '&:hover': {
+          boxShadow:
+            theme.palette.mode === 'light'
+              ? '0 8px 24px rgba(15, 23, 42, 0.10)'
+              : '0 8px 24px rgba(0, 0, 0, 0.45)',
+          transform: 'translateY(-2px)',
+        },
+      }}
+    >
       <Box display="flex" alignItems="center" mb={2}>
-        <Avatar src={profilePhoto} alt={name} sx={{ width: 48, height: 48 }} />
-        <Box ml={1.5} sx={{ flexGrow: 1 }}>
+        <Avatar
+          src={profilePhoto}
+          alt={name}
+          sx={{ width: 50, height: 50, border: '2px solid', borderColor: 'primary.light' }}
+        />
+        <Box ml={1.5} sx={{ flexGrow: 1, minWidth: 0 }}>
           {loadingUser ? (
             <CircularProgress size={18} />
           ) : (
@@ -156,21 +200,28 @@ const PostComponent = ({ post }) => {
               fontWeight={700}
               component={Link}
               to={`/profile/${post.uid}`}
-              sx={{ textDecoration: 'none', color: 'inherit' }}
+              sx={{ textDecoration: 'none', color: 'inherit', lineHeight: 1.3, '&:hover': { color: 'primary.main' } }}
             >
               {name}
             </Typography>
           )}
-          <Typography variant="caption" color="text.secondary">
-            {timeAgo(post.createdAt)}
-          </Typography>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.4, mt: 0.3 }}>
+            <ScheduleIcon sx={{ fontSize: 13, color: 'text.secondary' }} />
+            <Typography variant="body2" color="text.secondary" noWrap>
+              {timeAgo(post.createdAt)}
+            </Typography>
+          </Box>
         </Box>
         <Chip
           label={post.postType.charAt(0).toUpperCase() + post.postType.slice(1)}
           size="small"
-          color={typeColor}
           variant="filled"
-          sx={{ fontWeight: 600 }}
+          sx={{
+            fontWeight: 700,
+            color: isLost ? 'error.main' : 'success.main',
+            bgcolor: isLost ? 'rgba(225, 29, 72, 0.12)' : 'rgba(22, 163, 74, 0.12)',
+            '& .MuiChip-label': { px: 1.5 },
+          }}
         />
       </Box>
 
@@ -191,6 +242,8 @@ const PostComponent = ({ post }) => {
         </Box>
       )}
 
+      <Divider sx={{ my: 2 }} />
+
       <Box
         sx={{
           display: 'flex',
@@ -201,28 +254,39 @@ const PostComponent = ({ post }) => {
         <Button
           variant="text"
           onClick={() => setShowComments(!showComments)}
-          startIcon={<ForumIcon />}
-          sx={{ color: 'text.primary', flex: 1, minWidth: { xs: '100%', sm: 0 } }}
+          startIcon={<ChatBubbleOutlineIcon />}
+          sx={{ color: 'text.primary', flex: 1, minWidth: { xs: '100%', sm: 0 }, borderRadius: 2 }}
         >
           {comments.length > 0 ? `${comments.length} Comments` : 'Comments'}
         </Button>
-        <Button
-          variant="contained"
-          color="success"
-          startIcon={!isSmallScreen && <WhatsAppIcon />}
-          onClick={() => window.open(`https://wa.me/91${whatsapp}`, '_blank')}
-          sx={{ flex: 1 }}
-        >
-          {isSmallScreen ? <WhatsAppIcon /> : 'WhatsApp'}
-        </Button>
+        {post.uid !== currentUserId && (
+          <Button
+            variant="contained"
+            color="primary"
+            startIcon={!isSmallScreen && <ChatBubbleIcon />}
+            onClick={handleMessage}
+            sx={{ flex: 1, borderRadius: 2 }}
+          >
+            {isSmallScreen ? <ChatBubbleIcon /> : 'Message'}
+          </Button>
+        )}
         <Button
           variant="contained"
           color="error"
           startIcon={!isSmallScreen && <EmailIcon />}
           onClick={() => window.open(`https://mail.google.com/mail/?view=cm&fs=1&to=${email}`, '_blank')}
-          sx={{ flex: 1 }}
+          sx={{ flex: 1, borderRadius: 2 }}
         >
           {isSmallScreen ? <EmailIcon /> : 'Email'}
+        </Button>
+        <Button
+          variant="outlined"
+          color="inherit"
+          startIcon={!isSmallScreen && <LinkIcon />}
+          onClick={handleShare}
+          sx={{ flex: 1, borderRadius: 2 }}
+        >
+          {isSmallScreen ? <LinkIcon /> : 'Share'}
         </Button>
       </Box>
 
@@ -264,9 +328,10 @@ const PostComponent = ({ post }) => {
                       variant="contained"
                       color="primary"
                       size="small"
+                      disabled={commentLoading}
                       onClick={() => handleSaveEditedComment(comment._id)}
                     >
-                      Save
+                      {commentLoading ? <CircularProgress size={16} color="inherit" /> : 'Save'}
                     </Button>
                     <IconButton size="small" onClick={() => setEditingCommentId(null)} color="inherit">
                       <DeleteIcon fontSize="small" />
@@ -318,8 +383,8 @@ const PostComponent = ({ post }) => {
             InputProps={{
               endAdornment: (
                 <InputAdornment position="end">
-                  <IconButton onClick={handleCommentSubmit} disabled={commentLoading} edge="end">
-                    {commentLoading ? <CircularProgress size={18} /> : <SendIcon fontSize="small" />}
+                  <IconButton onClick={handleCommentSubmit} edge="end">
+                    <SendIcon fontSize="small" />
                   </IconButton>
                 </InputAdornment>
               ),
@@ -327,6 +392,17 @@ const PostComponent = ({ post }) => {
           />
         </Box>
       </Collapse>
+
+      <Snackbar
+        open={shareSnackbar}
+        autoHideDuration={2500}
+        onClose={() => setShareSnackbar(false)}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+      >
+        <Alert onClose={() => setShareSnackbar(false)} severity="success" variant="filled">
+          Link copied to clipboard!
+        </Alert>
+      </Snackbar>
     </Card>
   );
 };

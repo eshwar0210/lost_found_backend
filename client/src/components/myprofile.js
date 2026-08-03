@@ -19,12 +19,15 @@ import {
 } from '@mui/material';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
+import PhotoCameraIcon from '@mui/icons-material/PhotoCamera';
 import LocationOnIcon from '@mui/icons-material/LocationOn';
+import ScheduleIcon from '@mui/icons-material/Schedule';
 import axios from 'axios';
 import Header from './Header';
 import Footer from './footer';
 import ImageCarousel from './ImageCarousel';
 import { timeAgo } from '../utils/format';
+import BASE_URL from '../config';
 
 const MyProfile = () => {
   const theme = useTheme();
@@ -33,6 +36,9 @@ const MyProfile = () => {
   const [editContent, setEditContent] = useState('');
   const [editLocation, setEditLocation] = useState('');
   const [editType, setEditType] = useState('lost');
+  const [keptImages, setKeptImages] = useState([]);
+  const [newImages, setNewImages] = useState([]);
+  const [editLoading, setEditLoading] = useState(false);
   const [openEditDialog, setOpenEditDialog] = useState(false);
   const [loading, setLoading] = useState(true);
   const [notification, setNotification] = useState({ open: false, message: '', severity: 'success' });
@@ -44,7 +50,7 @@ const MyProfile = () => {
     const uid = localStorage.getItem('uid');
     if (uid) {
       axios
-        .get(`${process.env.REACT_APP_BASE_URL}/post/user/${uid}`)
+        .get(`${BASE_URL}/post/user/${uid}`)
         .then((response) => {
           const sorted = [...response.data].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
           setPosts(sorted);
@@ -61,7 +67,22 @@ const MyProfile = () => {
     setEditContent(post.description);
     setEditLocation(post.location);
     setEditType(post.postType);
+    setKeptImages(post.imageUrls || []);
+    setNewImages([]);
     setOpenEditDialog(true);
+  };
+
+  const handleEditImageUpload = (event) => {
+    const files = Array.from(event.target.files);
+    setNewImages((prev) => [...prev, ...files]);
+  };
+
+  const handleRemoveKeptImage = (url) => {
+    setKeptImages((prev) => prev.filter((u) => u !== url));
+  };
+
+  const handleRemoveNewImage = (index) => {
+    setNewImages((prev) => prev.filter((_, i) => i !== index));
   };
 
   const handleDelete = (post) => {
@@ -71,13 +92,13 @@ const MyProfile = () => {
 
   const confirmDeletePost = async () => {
     try {
-      await axios.delete(`${process.env.REACT_APP_BASE_URL}/post/${selectedPost._id}`);
+      await axios.delete(`${BASE_URL}/post/${selectedPost._id}`);
       setPosts((prev) => prev.filter((post) => post._id !== selectedPost._id));
       setNotification({ open: true, message: 'Post deleted successfully!', severity: 'success' });
 
       if (surveyResponse.trim() !== '') {
         const uid = localStorage.getItem('uid');
-        await axios.post(`${process.env.REACT_APP_BASE_URL}/auth/survey`, {
+        await axios.post(`${BASE_URL}/auth/survey`, {
           uid,
           surveyResponse: surveyResponse.trim(),
         });
@@ -92,25 +113,35 @@ const MyProfile = () => {
   };
 
   const handleUpdatePost = async () => {
+    setEditLoading(true);
+    const formData = new FormData();
+    formData.append('description', editContent);
+    formData.append('location', editLocation);
+    formData.append('postType', editType);
+    formData.append('keepImages', JSON.stringify(keptImages));
+    newImages.forEach((image) => formData.append('images', image));
     try {
-      await axios.put(`${process.env.REACT_APP_BASE_URL}/post/${selectedPost._id}`, {
-        description: editContent,
-        location: editLocation,
-        postType: editType,
-      });
+      const response = await axios.put(
+        `${BASE_URL}/post/${selectedPost._id}`,
+        formData
+      );
       setPosts((prev) =>
-        prev.map((post) =>
-          post._id === selectedPost._id
-            ? { ...post, description: editContent, location: editLocation, postType: editType }
-            : post
-        )
+        prev.map((post) => (post._id === response.data._id ? response.data : post))
       );
       setNotification({ open: true, message: 'Post updated successfully!', severity: 'success' });
       setOpenEditDialog(false);
     } catch (error) {
       console.error('Error updating post:', error);
       setNotification({ open: true, message: 'Failed to update post.', severity: 'error' });
+    } finally {
+      setEditLoading(false);
     }
+  };
+
+  const handleCloseEditDialog = () => {
+    setOpenEditDialog(false);
+    setKeptImages([]);
+    setNewImages([]);
   };
 
   return (
@@ -140,9 +171,12 @@ const MyProfile = () => {
                   color={post.postType === 'lost' ? 'error' : 'success'}
                   sx={{ fontWeight: 600 }}
                 />
-                <Typography variant="caption" color="text.secondary">
-                  {timeAgo(post.createdAt)}
-                </Typography>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.4 }}>
+                  <ScheduleIcon sx={{ fontSize: 13, color: 'text.secondary' }} />
+                  <Typography variant="body2" color="text.secondary">
+                    {timeAgo(post.createdAt)}
+                  </Typography>
+                </Box>
               </Box>
 
               <Box display="flex" alignItems="center" gap={0.5} color="text.secondary" mb={1}>
@@ -184,7 +218,7 @@ const MyProfile = () => {
         )}
 
         {/* Edit Post Dialog */}
-        <Dialog open={openEditDialog} onClose={() => setOpenEditDialog(false)} fullWidth maxWidth="sm">
+        <Dialog open={openEditDialog} onClose={handleCloseEditDialog} fullWidth maxWidth="sm">
           <DialogTitle>Edit Post</DialogTitle>
           <DialogContent>
             <Box display="flex" gap={1} mb={2} mt={1}>
@@ -222,28 +256,101 @@ const MyProfile = () => {
               value={editLocation}
               onChange={(e) => setEditLocation(e.target.value)}
             />
+            <Box mt={2}>
+              <Button variant="contained" component="label" startIcon={<PhotoCameraIcon />}>
+                {keptImages.length || newImages.length ? 'Add More Photos' : 'Upload Photos'}
+                <input
+                  hidden
+                  accept="image/*"
+                  type="file"
+                  multiple
+                  onChange={handleEditImageUpload}
+                />
+              </Button>
+              {(keptImages.length > 0 || newImages.length > 0) && (
+                <Box mt={1.5} display="flex" flexWrap="wrap">
+                  {keptImages.map((url) => (
+                    <Box
+                      key={url}
+                      sx={{ position: 'relative', marginRight: 1, marginBottom: 1 }}
+                    >
+                      <img
+                        src={url}
+                        alt="Existing post photo"
+                        style={{ width: '90px', height: '90px', objectFit: 'cover', borderRadius: '10px' }}
+                      />
+                      <IconButton
+                        size="small"
+                        title="Remove photo"
+                        sx={{
+                          position: 'absolute',
+                          top: -6,
+                          right: -6,
+                          bgcolor: 'error.main',
+                          color: '#fff',
+                          '&:hover': { bgcolor: 'error.dark' },
+                        }}
+                        onClick={() => handleRemoveKeptImage(url)}
+                      >
+                        <DeleteIcon sx={{ fontSize: 14 }} />
+                      </IconButton>
+                    </Box>
+                  ))}
+                  {newImages.map((image, index) => (
+                    <Box
+                      key={index}
+                      sx={{ position: 'relative', marginRight: 1, marginBottom: 1 }}
+                    >
+                      <img
+                        src={URL.createObjectURL(image)}
+                        alt={`New photo ${index}`}
+                        style={{ width: '90px', height: '90px', objectFit: 'cover', borderRadius: '10px' }}
+                      />
+                      <IconButton
+                        size="small"
+                        title="Remove photo"
+                        sx={{
+                          position: 'absolute',
+                          top: -6,
+                          right: -6,
+                          bgcolor: 'error.main',
+                          color: '#fff',
+                          '&:hover': { bgcolor: 'error.dark' },
+                        }}
+                        onClick={() => handleRemoveNewImage(index)}
+                      >
+                        <DeleteIcon sx={{ fontSize: 14 }} />
+                      </IconButton>
+                    </Box>
+                  ))}
+                </Box>
+              )}
+            </Box>
           </DialogContent>
           <DialogActions>
-            <Button onClick={() => setOpenEditDialog(false)} color="inherit">
+            <Button onClick={handleCloseEditDialog} color="inherit">
               Cancel
             </Button>
-            <Button onClick={handleUpdatePost} variant="contained" color="primary">
-              Update
+            <Button onClick={handleUpdatePost} variant="contained" color="primary" disabled={editLoading}>
+              {editLoading ? 'Updating...' : 'Update'}
             </Button>
           </DialogActions>
         </Dialog>
 
-        {/* Survey Dialog for Post Deletion */}
+        {/* Delete Post Dialog with optional feedback */}
         <Dialog open={openSurveyDialog} onClose={() => setOpenSurveyDialog(false)} fullWidth maxWidth="sm">
-          <DialogTitle>Feedback Survey</DialogTitle>
+          <DialogTitle>Delete this post?</DialogTitle>
           <DialogContent>
             <Typography variant="body1" mb={1}>
-              Did this app help you? Please provide your feedback (optional):
+              This will permanently remove the post and its images.
+            </Typography>
+            <Typography variant="body2" color="text.secondary" mb={2}>
+              Optional: tell us how the app helped you before you go (your feedback helps us improve):
             </Typography>
             <TextField
               autoFocus
               margin="dense"
-              label="Your Feedback"
+              label="Your Feedback (optional)"
               fullWidth
               value={surveyResponse}
               onChange={(e) => setSurveyResponse(e.target.value)}

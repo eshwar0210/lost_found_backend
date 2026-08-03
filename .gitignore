@@ -11,6 +11,11 @@ client/.env
 
 # logs
 *.log
+err
+log
+
+# local dev scripts
+scripts/
 
 # misc
 .DS_Store

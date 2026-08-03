@@ -16,10 +16,6 @@ const userSchema = new mongoose.Schema({
     required: true,
     
   },
-  whatsappNumber: {
-    type: String,
-    required: true,
-  },
   hostelName: {
     type: String,
     required: true,
@@ -27,6 +23,10 @@ const userSchema = new mongoose.Schema({
   profilePhotoUrl: {
     type: String, // URL of profile photo stored in Firebase
     default: null, // Optional field
+  },
+  lastSeenAt: {
+    type: Date,
+    default: null,
   },
   surveys: {
         type: [String], // Array of strings to store survey responses

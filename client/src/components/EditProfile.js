@@ -21,13 +21,14 @@ import {
   useTheme,
 } from '@mui/material';
 import DeleteIcon from '@mui/icons-material/Delete';
-import PhotoCameraIcon from '@mui/icons-material/PhotoCamera';
-import HotelIcon from '@mui/icons-material/Hotel';
-import LockIcon from '@mui/icons-material/Lock';
+import AddPhotoAlternateIcon from '@mui/icons-material/AddPhotoAlternate';
+import ApartmentIcon from '@mui/icons-material/Apartment';
+import PasswordIcon from '@mui/icons-material/Password';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { getAuth, EmailAuthProvider, reauthenticateWithCredential, updatePassword } from 'firebase/auth';
 import Header from './Header';
+import BASE_URL from '../config';
 import Footer from './footer';
 
 const EditProfile = () => {
@@ -73,7 +74,7 @@ const EditProfile = () => {
 
     try {
       const response = await axios.put(
-        `${process.env.REACT_APP_BASE_URL}/auth/user/${uid}/profile-picture`,
+        `${BASE_URL}/auth/user/${uid}/profile-picture`,
         formData,
         { headers: { 'Content-Type': 'multipart/form-data' } }
       );
@@ -102,7 +103,7 @@ const EditProfile = () => {
     const uid = localStorage.getItem('uid');
 
     try {
-      const response = await axios.put(`${process.env.REACT_APP_BASE_URL}/auth/user/${uid}/hostel`, {
+      const response = await axios.put(`${BASE_URL}/auth/user/${uid}/hostel`, {
         hostel: selectedHostel,
       });
 
@@ -161,7 +162,7 @@ const EditProfile = () => {
     const currentProfilePhotoUrl = localStorage.getItem('profile');
 
     try {
-      const response = await axios.delete(`${process.env.REACT_APP_BASE_URL}/auth/user/${uid}/profile-picture`, {
+      const response = await axios.delete(`${BASE_URL}/auth/user/${uid}/profile-picture`, {
         data: { currentProfilePhotoUrl },
       });
       if (response.status === 200) {
@@ -193,7 +194,7 @@ const EditProfile = () => {
       <Header />
       <Container maxWidth="sm" sx={{ flexGrow: 1, width: '100%' }}>
         <Card sx={{ p: { xs: 3, sm: 4 }, mb: 3 }}>
-          {sectionTitle(<PhotoCameraIcon color="primary" />, 'Update Profile Picture')}
+          {sectionTitle(<AddPhotoAlternateIcon color="primary" />, 'Update Profile Picture')}
 
           <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
             <Box sx={{ position: 'relative', mb: 2 }}>
@@ -240,7 +241,7 @@ const EditProfile = () => {
         </Card>
 
         <Card sx={{ p: { xs: 3, sm: 4 }, mb: 3 }}>
-          {sectionTitle(<HotelIcon color="primary" />, 'Update Hostel Information')}
+          {sectionTitle(<ApartmentIcon color="primary" />, 'Update Hostel Information')}
           <Select
             value={selectedHostel}
             onChange={(e) => setSelectedHostel(e.target.value)}
@@ -269,7 +270,7 @@ const EditProfile = () => {
         </Card>
 
         <Card sx={{ p: { xs: 3, sm: 4 } }}>
-          {sectionTitle(<LockIcon color="primary" />, 'Change Password')}
+          {sectionTitle(<PasswordIcon color="primary" />, 'Change Password')}
           <TextField
             type="password"
             label="Current Password"

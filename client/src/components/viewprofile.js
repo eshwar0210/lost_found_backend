@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import {
   Box,
   Container,
@@ -9,17 +9,20 @@ import {
   Card,
   Chip,
   Divider,
+  Button,
   useTheme,
 } from '@mui/material';
 import EmailIcon from '@mui/icons-material/Email';
-import PhoneIcon from '@mui/icons-material/Phone';
-import HomeIcon from '@mui/icons-material/Home';
+import ApartmentIcon from '@mui/icons-material/Apartment';
+import ChatBubbleIcon from '@mui/icons-material/ChatBubble';
 import Header from './Header';
 import Footer from './footer';
 import PostComponent from './Postcomponent';
+import BASE_URL from '../config';
 
 const ViewProfile = () => {
   const { userId } = useParams();
+  const navigate = useNavigate();
   const theme = useTheme();
   const [userDetails, setUserDetails] = useState(null);
   const [posts, setPosts] = useState([]);
@@ -28,11 +31,11 @@ const ViewProfile = () => {
   useEffect(() => {
     const fetchUserDetails = async () => {
       try {
-        const response = await fetch(`${process.env.REACT_APP_BASE_URL}/auth/user/${userId}`);
+        const response = await fetch(`${BASE_URL}/auth/user/${userId}`);
         const data = await response.json();
         setUserDetails(data);
 
-        const postsResponse = await fetch(`${process.env.REACT_APP_BASE_URL}/post/user/${userId}`);
+        const postsResponse = await fetch(`${BASE_URL}/post/user/${userId}`);
         const postsData = await postsResponse.json();
         setPosts([...postsData].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt)));
       } catch (error) {
@@ -69,8 +72,7 @@ const ViewProfile = () => {
 
   const infoRows = [
     { icon: <EmailIcon />, label: 'Email', value: userDetails.email },
-    { icon: <PhoneIcon />, label: 'WhatsApp', value: userDetails.whatsappNumber },
-    { icon: <HomeIcon />, label: 'Hostel', value: userDetails.hostelName },
+    { icon: <ApartmentIcon />, label: 'Hostel', value: userDetails.hostelName },
   ];
 
   return (
@@ -91,6 +93,19 @@ const ViewProfile = () => {
             size="small"
             sx={{ mt: 1, mb: 2, bgcolor: 'primary.main', color: '#fff' }}
           />
+          {userId !== localStorage.getItem('uid') && (
+            <Box>
+              <Button
+                variant="contained"
+                color="primary"
+                startIcon={<ChatBubbleIcon />}
+                onClick={() => navigate(`/chat?with=${userId}`)}
+                sx={{ borderRadius: 24, px: 3 }}
+              >
+                Message
+              </Button>
+            </Box>
+          )}
           <Divider sx={{ my: 2 }} />
           <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1, maxWidth: 420, mx: 'auto' }}>
             {infoRows.map((row) => (
@@ -100,7 +115,7 @@ const ViewProfile = () => {
                   <Typography variant="body2">{row.label}</Typography>
                 </Box>
                 <Typography variant="body2" fontWeight={600}>
-                  {row.value}
+                  {row.value || '—'}
                 </Typography>
               </Box>
             ))}

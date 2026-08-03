@@ -16,14 +16,19 @@ import {
   Chip,
   CircularProgress,
   Tooltip,
+  Tabs,
+  Tab,
+  InputAdornment,
   useTheme,
 } from '@mui/material';
 import PhotoCameraIcon from '@mui/icons-material/PhotoCamera';
 import DeleteIcon from '@mui/icons-material/Delete';
 import LocationOnIcon from '@mui/icons-material/LocationOn';
-import AddCommentIcon from '@mui/icons-material/AddComment';
+import EditNoteIcon from '@mui/icons-material/EditNote';
+import SearchIcon from '@mui/icons-material/Search';
 import Header from './Header';
 import PostComponent from './Postcomponent';
+import BASE_URL from '../config';
 import Footer from './footer';
 
 const Home = () => {
@@ -39,10 +44,15 @@ const Home = () => {
   const [snackbarSeverity, setSnackbarSeverity] = useState('success');
   const [loading, setLoading] = useState(false);
   const [feedLoading, setFeedLoading] = useState(true);
+  const [filter, setFilter] = useState('all');
+  const [search, setSearch] = useState('');
   const uid = localStorage.getItem('uid');
   const profilePhoto = localStorage.getItem('profile');
 
-  const handleClickOpen = () => setOpen(true);
+  const handleClickOpen = (type) => {
+    if (type) setPostType(type);
+    setOpen(true);
+  };
 
   const handleClose = () => {
     setOpen(false);
@@ -55,7 +65,7 @@ const Home = () => {
   useEffect(() => {
     const fetchPosts = async () => {
       try {
-        const response = await fetch(`${process.env.REACT_APP_BASE_URL}/post/`);
+        const response = await fetch(`${BASE_URL}/post/`);
         const data = await response.json();
         const sorted = [...data].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
         setPosts(sorted);
@@ -86,7 +96,7 @@ const Home = () => {
     images.forEach((image) => formData.append('images', image));
 
     try {
-      const response = await fetch(`${process.env.REACT_APP_BASE_URL}/post/`, {
+      const response = await fetch(`${BASE_URL}/post/`, {
         method: 'POST',
         body: formData,
       });
@@ -119,6 +129,16 @@ const Home = () => {
     setImages((prevImages) => prevImages.filter((_, i) => i !== index));
   };
 
+  const filteredPosts = posts.filter((post) => {
+    const matchesType = filter === 'all' || post.postType === filter;
+    const query = search.trim().toLowerCase();
+    const matchesSearch =
+      !query ||
+      (post.location || '').toLowerCase().includes(query) ||
+      (post.description || '').toLowerCase().includes(query);
+    return matchesType && matchesSearch;
+  });
+
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
       <Header />
@@ -135,29 +155,59 @@ const Home = () => {
             border: `1px solid ${theme.palette.divider}`,
             mb: 3,
             cursor: 'pointer',
+            flexWrap: 'wrap',
             '&:hover': {
               borderColor: 'primary.main',
               boxShadow: `0 0 0 3px ${theme.palette.primary.main}22`,
             },
           }}
-          onClick={handleClickOpen}
+          onClick={() => handleClickOpen()}
         >
-          <Avatar src={profilePhoto} sx={{ width: 44, height: 44 }} />
-          <Box
-            sx={{
-              flexGrow: 1,
-              px: 2,
-              py: 1.4,
-              borderRadius: 4,
-              bgcolor: theme.palette.mode === 'light' ? '#f1f5f9' : '#0f172a',
-              color: 'text.secondary',
-            }}
-          >
-            <Typography variant="body1">What did you lose or find today?</Typography>
+          <Avatar
+            src={profilePhoto}
+            sx={{ width: 46, height: 46, border: '2px solid', borderColor: 'primary.light' }}
+          />
+          <Box sx={{ flexGrow: 1, minWidth: { xs: '100%', sm: 0 }, order: { xs: 2, sm: 0 } }}>
+            <Typography variant="body1" fontWeight={600} color="text.primary">
+              What did you lose or find today?
+            </Typography>
+            <Typography variant="caption" color="text.secondary">
+              Add a location, photos and details for your campus community.
+            </Typography>
           </Box>
-          <IconButton>
-            <AddCommentIcon color="primary" />
-          </IconButton>
+          <Box sx={{ display: 'flex', gap: 1, order: { xs: 1, sm: 0 }, ml: { sm: 'auto' } }}>
+            <Button
+              size="small"
+              variant="outlined"
+              color="error"
+              onClick={(e) => {
+                e.stopPropagation();
+                handleClickOpen('lost');
+              }}
+            >
+              Lost
+            </Button>
+            <Button
+              size="small"
+              variant="outlined"
+              color="success"
+              onClick={(e) => {
+                e.stopPropagation();
+                handleClickOpen('found');
+              }}
+            >
+              Found
+            </Button>
+            <IconButton
+              sx={{ bgcolor: 'primary.main', color: '#fff', '&:hover': { bgcolor: 'primary.dark' } }}
+              onClick={(e) => {
+                e.stopPropagation();
+                handleClickOpen();
+              }}
+            >
+              <EditNoteIcon />
+            </IconButton>
+          </Box>
         </Box>
 
         {/* Create Post Dialog */}
@@ -273,18 +323,58 @@ const Home = () => {
           </DialogActions>
         </Dialog>
 
+        {/* Filters */}
+        <Box
+          sx={{
+            display: 'flex',
+            flexDirection: { xs: 'column', sm: 'row' },
+            alignItems: { xs: 'stretch', sm: 'center' },
+            gap: 1,
+            mb: 3,
+          }}
+        >
+          <TextField
+            fullWidth
+            size="small"
+            placeholder="Search by location or description..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            sx={{ flexGrow: 1 }}
+            InputProps={{
+              startAdornment: (
+                <InputAdornment position="start">
+                  <SearchIcon fontSize="small" />
+                </InputAdornment>
+              ),
+            }}
+          />
+          <Tabs
+            value={filter}
+            onChange={(_, value) => setFilter(value)}
+            sx={{ minHeight: 36, '& .MuiTab-root': { minHeight: 36, py: 0.5 } }}
+          >
+            <Tab label="All" value="all" />
+            <Tab label="Lost" value="lost" />
+            <Tab label="Found" value="found" />
+          </Tabs>
+        </Box>
+
         {/* Feed */}
         {feedLoading ? (
           <Box display="flex" justifyContent="center" py={8}>
             <CircularProgress />
           </Box>
-        ) : posts.length === 0 ? (
+        ) : filteredPosts.length === 0 ? (
           <Box textAlign="center" py={8} color="text.secondary">
-            <Typography variant="h6">No posts yet</Typography>
-            <Typography variant="body2">Be the first to report a lost or found item.</Typography>
+            <Typography variant="h6">No posts found</Typography>
+            <Typography variant="body2">
+              {posts.length === 0
+                ? 'Be the first to report a lost or found item.'
+                : 'Try a different filter or search term.'}
+            </Typography>
           </Box>
         ) : (
-          posts.map((post) => <PostComponent key={post._id} post={post} />)
+          filteredPosts.map((post) => <PostComponent key={post._id} post={post} />)
         )}
 
         <Snackbar

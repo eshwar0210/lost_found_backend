@@ -14,9 +14,10 @@ router.post('/', upload.array('images') , createPost);
 router.get('/',postcontroller.getAllPosts);
 router.post('/:postId/comment', postcontroller.addComment);
 router.get('/user/:uid', postcontroller.getPostsByUserId);
+router.get('/:id', postcontroller.getPostById);
 router.put('/:postId/comment/:commentId',postcontroller.updateComment);
 router.delete('/:postId/comment/:commentId',postcontroller.deleteComment);
-router.put('/:id', postcontroller.updatePost);
+router.put('/:id', upload.array('images'), postcontroller.updatePost);
 router.delete('/:id',postcontroller.deletePost);
 
 module.exports = router;
