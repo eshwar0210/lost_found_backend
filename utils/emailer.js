@@ -2,6 +2,12 @@ const nodemailer = require('nodemailer');
 
 let transporter = null;
 
+const getFromAddress = () => {
+  const configured = process.env.EMAIL_FROM || process.env.SMTP_USER;
+  if (configured && configured.includes('@')) return configured;
+  return `${configured || 'Lost & Found'} <${process.env.SMTP_USER}>`;
+};
+
 const initTransporter = () => {
   if (
     transporter ||
@@ -19,7 +25,11 @@ const initTransporter = () => {
       user: process.env.SMTP_USER,
       pass: process.env.SMTP_PASS,
     },
+    connectionTimeout: 15000,
+    greetingTimeout: 15000,
+    socketTimeout: 20000,
   });
+  console.log(`SMTP configured: ${process.env.SMTP_HOST}:${process.env.SMTP_PORT || 587}`);
 };
 
 const sendEmail = async ({ to, subject, text, html }) => {
@@ -30,7 +40,7 @@ const sendEmail = async ({ to, subject, text, html }) => {
   }
   try {
     await transporter.sendMail({
-      from: process.env.EMAIL_FROM || process.env.SMTP_USER,
+      from: getFromAddress(),
       to,
       subject,
       text,

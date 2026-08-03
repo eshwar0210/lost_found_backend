@@ -31,13 +31,15 @@ const createNotification = async ({ recipientUid, fromUid, fromName, type, text,
             type === 'comment'
               ? `${base}/post/${postId || ''}`
               : `${base}/chat?with=${fromUid}`;
-          await sendNotificationEmail({
+          await           sendNotificationEmail({
             to: recipient.email,
             name: recipient.name,
             actorName: fromName,
             kind: type,
             preview: text,
             link,
+          }).catch((error) => {
+            console.error('Email notification failed:', error.message);
           });
         }
       }
