@@ -93,8 +93,11 @@ const Chat = () => {
     const unsubMessage = onSocketEvent('chat:message', ({ conversationId, message }) => {
       if (conversationId === activeId) {
         setMessages((prev) => {
-          if (prev.some((m) => m._id === message._id)) return prev;
-          return [...prev, message];
+          const cleaned = prev.filter(
+            (m) => !(m._tempId && m.clientId && m.clientId === message.clientId)
+          );
+          if (cleaned.some((m) => m._id === message._id)) return cleaned;
+          return [...cleaned, message];
         });
         if (message.senderUid !== uid) {
           markConversationRead(conversationId, uid);
@@ -250,9 +253,11 @@ const Chat = () => {
     if (!text || !activeId) return;
     setInput('');
     const tempId = `temp-${Date.now()}`;
+    const clientId = `c-${uid}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
     const optimistic = {
       _id: tempId,
       _tempId: tempId,
+      clientId,
       conversationId: activeId,
       senderUid: uid,
       text,
@@ -261,7 +266,7 @@ const Chat = () => {
     setMessages((prev) => [...prev, optimistic]);
 
     try {
-      const saved = await sendMessage({ conversationId: activeId, text });
+      const saved = await sendMessage({ conversationId: activeId, text, clientId });
       setMessages((prev) => {
         const cleaned = prev.filter((m) => m._tempId !== tempId);
         if (cleaned.some((m) => m._id === saved._id)) return cleaned;

@@ -26,14 +26,16 @@ export const markConversationRead = async (conversationId, uid) => {
   await axios.put(`${BASE_URL}/chat/read/${conversationId}`, { uid });
 };
 
-export const sendMessage = async ({ conversationId, text }) => {
+export const sendMessage = async ({ conversationId, text, clientId }) => {
   const uid = localStorage.getItem('uid');
+  const resolvedClientId =
+    clientId || `c-${uid}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
   const socket = getSocket();
 
   if (socket && socket.connected) {
     try {
       const result = await new Promise((resolve, reject) => {
-        socket.timeout(5000).emit('chat:send', { conversationId, text }, (err, res) => {
+        socket.timeout(5000).emit('chat:send', { conversationId, text, clientId: resolvedClientId }, (err, res) => {
           if (err || !res || !res.ok) {
             reject(new Error((res && res.error) || 'Socket send failed'));
           } else {
@@ -48,8 +50,8 @@ export const sendMessage = async ({ conversationId, text }) => {
   }
 
   const { data } = await axios.post(`${BASE_URL}/chat/messages/${conversationId}`, {
-    senderUid: uid,
     text,
+    clientId: resolvedClientId,
   });
   return data;
 };

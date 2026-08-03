@@ -12,6 +12,12 @@ const messageSchema = new mongoose.Schema(
       type: String,
       required: true,
     },
+    clientId: {
+      type: String,
+      sparse: true,
+      index: true,
+      unique: true,
+    },
     text: {
       type: String,
       required: true,

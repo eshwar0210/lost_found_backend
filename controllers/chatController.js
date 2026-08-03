@@ -12,12 +12,17 @@ const getUserByUid = async (uid) => {
     : { uid, name: 'Unknown user', profilePhotoUrl: null, lastSeenAt: null };
 };
 
-exports.handleChatMessage = async ({ conversationId, senderUid, text }) => {
+exports.handleChatMessage = async ({ conversationId, senderUid, text, clientId }) => {
   if (!mongoose.Types.ObjectId.isValid(conversationId)) {
     throw new Error('Invalid conversation id');
   }
   const trimmed = (text || '').trim();
   if (!trimmed) throw new Error('Message cannot be empty');
+
+  if (clientId) {
+    const existing = await Message.findOne({ conversationId, clientId });
+    if (existing) return existing.toObject();
+  }
 
   const conversation = await Conversation.findById(conversationId);
   if (!conversation) throw new Error('Conversation not found');
@@ -29,6 +34,7 @@ exports.handleChatMessage = async ({ conversationId, senderUid, text }) => {
     conversationId,
     senderUid,
     text: trimmed,
+    clientId: clientId || undefined,
   });
 
   conversation.lastMessageAt = message.createdAt;
