@@ -154,9 +154,9 @@ exports.getMessages = async (req, res) => {
 exports.sendMessage = async (req, res) => {
   const { conversationId } = req.params;
   const senderUid = req.uid; // Verified user from the auth middleware
-  const { text } = req.body;
+  const { text, clientId } = req.body;
   try {
-    const message = await exports.handleChatMessage({ conversationId, senderUid, text });
+    const message = await exports.handleChatMessage({ conversationId, senderUid, text, clientId });
     res.status(201).json(message);
   } catch (error) {
     console.error('Error sending message:', error);

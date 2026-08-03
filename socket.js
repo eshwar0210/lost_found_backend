@@ -43,6 +43,7 @@ const setupSocket = (server) => {
           conversationId: payload.conversationId,
           senderUid: socket.uid,
           text: payload.text,
+          clientId: payload.clientId,
         });
         if (typeof ack === 'function') ack({ ok: true, message });
       } catch (error) {
