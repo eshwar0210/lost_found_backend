@@ -61,7 +61,8 @@ exports.handleChatMessage = async ({ conversationId, senderUid, text }) => {
 };
 
 exports.getOrCreateConversation = async (req, res) => {
-  const { userA, userB } = req.query;
+  const userA = req.uid; // Verified user from the auth middleware
+  const { userB } = req.query;
   if (!userA || !userB || userA === userB) {
     return res.status(400).json({ message: 'Two different users are required' });
   }
@@ -86,7 +87,7 @@ exports.getOrCreateConversation = async (req, res) => {
 };
 
 exports.getConversations = async (req, res) => {
-  const { uid } = req.params;
+  const uid = req.uid; // Verified user from the auth middleware
   try {
     const conversations = await Conversation.find({ participants: uid }).sort({
       lastMessageAt: -1,
@@ -128,6 +129,14 @@ exports.getConversations = async (req, res) => {
 exports.getMessages = async (req, res) => {
   const { conversationId } = req.params;
   try {
+    const conversation = await Conversation.findById(conversationId);
+    if (!conversation) {
+      return res.status(404).json({ message: 'Conversation not found' });
+    }
+    if (!conversation.participants.includes(req.uid)) {
+      return res.status(403).json({ message: 'You are not part of this conversation' });
+    }
+
     const messages = await Message.find({ conversationId }).sort({ createdAt: 1 });
     res.status(200).json(messages);
   } catch (error) {
@@ -138,7 +147,8 @@ exports.getMessages = async (req, res) => {
 
 exports.sendMessage = async (req, res) => {
   const { conversationId } = req.params;
-  const { senderUid, text } = req.body;
+  const senderUid = req.uid; // Verified user from the auth middleware
+  const { text } = req.body;
   try {
     const message = await exports.handleChatMessage({ conversationId, senderUid, text });
     res.status(201).json(message);
@@ -150,18 +160,23 @@ exports.sendMessage = async (req, res) => {
 
 exports.markRead = async (req, res) => {
   const { conversationId } = req.params;
-  const { uid } = req.body;
+  const uid = req.uid; // Verified user from the auth middleware
   try {
+    const conversation = await Conversation.findById(conversationId);
+    if (!conversation) {
+      return res.status(404).json({ message: 'Conversation not found' });
+    }
+    if (!conversation.participants.includes(uid)) {
+      return res.status(403).json({ message: 'You are not part of this conversation' });
+    }
+
     await Message.updateMany(
       { conversationId, senderUid: { $ne: uid }, read: false },
       { read: true }
     );
 
-    const conversation = await Conversation.findById(conversationId);
-    if (conversation) {
-      const otherUid = conversation.participants.find((p) => p !== uid);
-      if (otherUid) emitToUser(otherUid, 'chat:read', { conversationId, readerUid: uid });
-    }
+    const otherUid = conversation.participants.find((p) => p !== uid);
+    if (otherUid) emitToUser(otherUid, 'chat:read', { conversationId, readerUid: uid });
 
     res.status(200).json({ message: 'Messages marked as read' });
   } catch (error) {

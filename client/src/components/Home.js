@@ -29,6 +29,7 @@ import SearchIcon from '@mui/icons-material/Search';
 import Header from './Header';
 import PostComponent from './Postcomponent';
 import BASE_URL from '../config';
+import { authHeaders } from '../services/api';
 import Footer from './footer';
 
 const Home = () => {
@@ -98,6 +99,7 @@ const Home = () => {
     try {
       const response = await fetch(`${BASE_URL}/post/`, {
         method: 'POST',
+        headers: await authHeaders(),
         body: formData,
       });
 

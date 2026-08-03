@@ -50,7 +50,7 @@ const createNotification = async ({ recipientUid, fromUid, fromName, type, text,
 };
 
 exports.getNotifications = async (req, res) => {
-  const { uid } = req.params;
+  const uid = req.uid; // Verified user from the auth middleware
   try {
     const notifications = await Notification.find({ recipientUid: uid })
       .sort({ createdAt: -1 })
@@ -63,7 +63,7 @@ exports.getNotifications = async (req, res) => {
 };
 
 exports.getUnreadCount = async (req, res) => {
-  const { uid } = req.params;
+  const uid = req.uid; // Verified user from the auth middleware
   try {
     const count = await Notification.countDocuments({ recipientUid: uid, read: false });
     res.status(200).json({ count });
@@ -74,7 +74,7 @@ exports.getUnreadCount = async (req, res) => {
 };
 
 exports.markAllRead = async (req, res) => {
-  const { uid } = req.params;
+  const uid = req.uid; // Verified user from the auth middleware
   try {
     await Notification.updateMany({ recipientUid: uid, read: false }, { read: true });
     res.status(200).json({ message: 'All notifications marked as read' });
@@ -87,6 +87,13 @@ exports.markAllRead = async (req, res) => {
 exports.markOneRead = async (req, res) => {
   const { id } = req.params;
   try {
+    const notification = await Notification.findById(id);
+    if (!notification) {
+      return res.status(404).json({ message: 'Notification not found' });
+    }
+    if (notification.recipientUid !== req.uid) {
+      return res.status(403).json({ message: 'You are not authorized to update this notification' });
+    }
     await Notification.findByIdAndUpdate(id, { read: true });
     res.status(200).json({ message: 'Notification marked as read' });
   } catch (error) {

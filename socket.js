@@ -11,11 +11,18 @@ const setupSocket = (server) => {
     },
   });
 
-  io.use((socket, next) => {
-    const uid = socket.handshake.auth && socket.handshake.auth.uid;
-    if (!uid) return next(new Error('unauthorized'));
-    socket.uid = uid;
-    next();
+  io.use(async (socket, next) => {
+    const auth = socket.handshake.auth || {};
+    if (!auth.token) return next(new Error('unauthorized'));
+    try {
+      const { admin } = require('./firebase');
+      const decodedToken = await admin.auth().verifyIdToken(auth.token);
+      if (auth.uid && decodedToken.uid !== auth.uid) return next(new Error('unauthorized'));
+      socket.uid = decodedToken.uid;
+      next();
+    } catch (error) {
+      return next(new Error('unauthorized'));
+    }
   });
 
   io.on('connection', (socket) => {

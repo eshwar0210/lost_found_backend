@@ -16,7 +16,8 @@ exports.createPost = async (req, res) => {
     try {
         // console.log("API for creating post triggered");
 
-        const { location, postType, description, uid } = req.body; // Get post data from request body
+        const { location, postType, description } = req.body; // Get post data from request body
+        const uid = req.uid; // Verified user from the auth middleware
 
         let imageUrls = [];
         // Check if files are uploaded
@@ -80,7 +81,8 @@ exports.getPostById = async (req, res) => {
 
 exports.addComment = async (req, res) => {
     const { postId } = req.params;
-    const { userId, userName, comment } = req.body;
+    const userId = req.uid; // Verified user from the auth middleware
+    const { userName, comment } = req.body;
     try {
         const post = await Post.findById(postId);
 
@@ -136,6 +138,10 @@ exports.updatePost = async (req, res) => {
         const post = await Post.findById(id);
         if (!post) {
             return res.status(404).json({ message: 'Post not found' });
+        }
+
+        if (post.uid !== req.uid) {
+            return res.status(403).json({ message: 'You are not authorized to edit this post' });
         }
 
         // Parse which existing images to keep (client sends a JSON array of URLs)
@@ -203,6 +209,10 @@ exports.deletePost = async (req, res) => {
             return res.status(404).json({ message: 'Post not found!' });
         }
 
+        if (post.uid !== req.uid) {
+            return res.status(403).json({ message: 'You are not authorized to delete this post' });
+        }
+
         // Log the imageUrls for debugging
         console.log('Image URLs:', post.imageUrls);
 
@@ -252,7 +262,10 @@ exports.updateComment = async (req, res) => {
             return res.status(404).json({ message: 'Comment not found' });
         }
 
-        
+        if (commentToUpdate.userId !== req.uid) {
+            return res.status(403).json({ message: 'You are not authorized to edit this comment' });
+        }
+
        
 
         // Update the comment content
@@ -284,6 +297,10 @@ exports.deleteComment = async (req, res) => {
 
         if (!commentToDelete) {
             return res.status(404).json({ message: 'Comment not found' });
+        }
+
+        if (commentToDelete.userId !== req.uid) {
+            return res.status(403).json({ message: 'You are not authorized to delete this comment' });
         }
 
         // Remove the comment from the comments array

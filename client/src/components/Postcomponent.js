@@ -32,6 +32,7 @@ import ImageCarousel from './ImageCarousel';
 import { timeAgo } from '../utils/format';
 import { useNavigate } from 'react-router-dom';
 import BASE_URL from '../config';
+import { authHeaders } from '../services/api';
 
 const PostComponent = ({ post }) => {
   const [email, setEmail] = useState('');
@@ -82,7 +83,7 @@ const PostComponent = ({ post }) => {
     try {
       const response = await fetch(`${BASE_URL}/post/${post._id}/comment`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...(await authHeaders()) },
         body: JSON.stringify({ userId, userName, comment: newComment }),
       });
 
@@ -108,7 +109,7 @@ const PostComponent = ({ post }) => {
     try {
       const response = await fetch(`${BASE_URL}/post/${post._id}/comment/${commentId}`, {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...(await authHeaders()) },
         body: JSON.stringify({ comment: editedComment }),
       });
 
@@ -134,6 +135,7 @@ const PostComponent = ({ post }) => {
     try {
       const response = await fetch(`${BASE_URL}/post/${post._id}/comment/${commentId}`, {
         method: 'DELETE',
+        headers: await authHeaders(),
       });
 
       if (!response.ok) {

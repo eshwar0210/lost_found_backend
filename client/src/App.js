@@ -11,6 +11,7 @@ import ViewProfile from './components/viewprofile';
 import Chat from './components/Chat';
 import SharedPost from './components/SharedPost';
 import { ColorModeContext, useThemeMode } from './theme';
+import './services/api';
 
 const isAuthenticated = () => !!localStorage.getItem('authToken');
 

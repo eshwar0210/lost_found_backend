@@ -1,5 +1,6 @@
 import BASE_URL from '../config';
 import { io } from 'socket.io-client';
+import { getAuthToken } from './api';
 
 let socket = null;
 let connectedUid = null;
@@ -15,7 +16,7 @@ export const connectSocket = (uid) => {
   }
   connectedUid = uid;
   socket = io(BASE_URL || undefined, {
-    auth: { uid },
+    auth: async (cb) => cb({ uid, token: await getAuthToken() }),
     transports: ['websocket', 'polling'],
   });
   return socket;

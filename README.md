@@ -126,6 +126,8 @@ The client automatically uses **relative API URLs** when `REACT_APP_BASE_URL` is
 
 Base path `/api` is not used — endpoints are mounted directly (e.g. `/auth`, `/post`).
 
+**Authentication:** mutating and user-scoped endpoints require a Firebase ID token sent as `Authorization: Bearer <token>` in the request header (the client attaches this automatically). The verified user is derived from the token server-side — never from the request body. Public read endpoints (post list, user profiles, search) do not require a token.
+
 ### Auth (`/auth`)
 | Method | Endpoint | Description |
 |--------|----------|-------------|

@@ -108,7 +108,7 @@ exports.searchUsers = async (req, res) => {
 
 // Function to update profile picture
 exports.updateProfilePicture = async (req, res) => {
-    const { uid } = req.params; // Fetch UID from request params
+    const uid = req.uid; // Verified user from the auth middleware
     const { currentProfilePhotoUrl } = req.body; // Current photo URL passed from frontend
 
     try {
@@ -143,7 +143,7 @@ exports.updateProfilePicture = async (req, res) => {
 
 // Function to remove a profile picture
 exports.removeProfilePicture = async (req, res) => {
-    const { uid } = req.params; // Get user ID from parameters
+    const uid = req.uid; // Verified user from the auth middleware
     const { currentProfilePhotoUrl } = req.body; // Get current profile photo URL from request body
 
     if (!currentProfilePhotoUrl) {
@@ -166,7 +166,7 @@ exports.removeProfilePicture = async (req, res) => {
 
 
 exports.updateHostelInfo = async (req, res) => {
-    const { uid } = req.params; // Get the uid from the request parameters
+    const uid = req.uid; // Verified user from the auth middleware
     const { hostel } = req.body; // Get the hostel information from the request body
 
     try {
@@ -191,7 +191,8 @@ exports.updateHostelInfo = async (req, res) => {
 
 // Submit Survey API
 exports.addnewsurvey = async (req, res) => {
-    const { uid, surveyResponse } = req.body;
+    const uid = req.uid; // Verified user from the auth middleware
+    const { surveyResponse } = req.body;
 
     if (!uid || !surveyResponse) {
         return res.status(400).json({ message: 'UID and survey response are required.' });
