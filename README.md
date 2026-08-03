@@ -16,7 +16,6 @@ A full-stack web app for college campuses to help people find lost items and reu
 - **Notifications** — in-app notification bell + email notifications for comments and messages (Nodemailer / SMTP)
 - **Profile management** — avatar upload/removal, hostel info, email & password management
 - **Auth** — Firebase Authentication (email/password) with email verification; verified server-side via Firebase Admin SDK
-- **Seeded demo data** — 12 users, 20 posts, comments, and conversations for local development
 - **Responsive UI** — Material UI, works from mobile to desktop
 
 ## 🛠 Tech Stack
@@ -41,7 +40,6 @@ A full-stack web app for college campuses to help people find lost items and reu
 ├── controllers/              # Request handlers
 ├── models/                   # Mongoose models (User, Posts, Conversation, Message, Notification)
 ├── utils/                    # cloudinary.js, emailer.js
-├── scripts/                  # Local-only seeding / data-fix utilities (gitignored)
 └── client/                   # React frontend (create-react-app)
     ├── src/config.js         # API base URL helper (relative in production)
     ├── src/components/       # UI components
@@ -198,16 +196,16 @@ The repo is designed to run as a **single Render Web Service** (the Express serv
 5. In the **Firebase Console → Authentication → Settings → Authorized domains**, add your Render URL (required for sign-in).
 6. Deploy and open the URL.
 
+### Handling `.env` on Render
+
+`.env` is gitignored and **never uploaded to GitHub or Render**. Instead, the same variables are stored inside the Render service:
+
+- **Service → Environment** → add every variable from your local `.env` (same names, same values). Render encrypts secret values and injects them as real environment variables for both the **build** and **runtime** steps.
+- `dotenv.config()` in `server.js` only reads the `.env` file if it exists — it never overrides an environment variable that's already set — so on Render the dashboard values simply take over and no `.env` file is needed.
+- Also add the **`REACT_APP_FIREBASE_*`** variables: create-react-app inlines these into the JS bundle during the build, so they must be present when the `npm run build` step runs (Render exposes service env vars to builds too).
+- `FIREBASE_PRIVATE_KEY`: paste the full key. Render preserves its newlines, and `firebase.js` additionally handles the escaped `\n` form, so either copy works.
+
 > **Note:** Render's free tier sleeps after ~15 minutes of inactivity, so the first request after idle will be slow. Use a periodic uptime ping or a paid instance to keep it warm.
-
-## 🧪 Local Demo Data
-
-The `scripts/` folder contains local-only utilities (gitignored, not deployed):
-
-- `seed.js` — creates 12 users (`Pass@1234`, pre-verified) and 20 posts with images
-- `fiximages.js` / `fixavatars.js` — replace seeded images/avatars with new sources
-
-Run them from the repo root with `node scripts/seed.js` (requires the backend `.env`).
 
 ## 📄 License
 
