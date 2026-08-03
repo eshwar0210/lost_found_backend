@@ -67,6 +67,8 @@ const Chat = () => {
   const inputRef = useRef(null);
   const deliveredIdsRef = useRef(new Set());
   const readConvsRef = useRef(new Set());
+  const sendingRef = useRef(false);
+  const prevLenRef = useRef(0);
 
   useEffect(() => {
     const withUid = searchParams.get('with');
@@ -171,7 +173,11 @@ const Chat = () => {
   }, []);
 
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    const len = messages.length;
+    if (len > prevLenRef.current) {
+      messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    }
+    prevLenRef.current = len;
   }, [messages]);
 
   useEffect(() => {
@@ -250,7 +256,8 @@ const Chat = () => {
 
   const handleSend = async () => {
     const text = input.trim();
-    if (!text || !activeId) return;
+    if (!text || !activeId || sendingRef.current) return;
+    sendingRef.current = true;
     setInput('');
     const tempId = `temp-${Date.now()}`;
     const clientId = `c-${uid}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
@@ -285,6 +292,8 @@ const Chat = () => {
       console.error('Error sending message:', error);
       setMessages((prev) => prev.filter((m) => m._tempId !== tempId));
       setInput((prev) => (prev ? prev : text));
+    } finally {
+      sendingRef.current = false;
     }
   };
 

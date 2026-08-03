@@ -264,6 +264,14 @@ const Header = () => {
                 </IconButton>
               </Tooltip>
 
+              <Typography
+                variant="body2"
+                fontWeight={600}
+                sx={{ mr: 0.5, display: { xs: 'none', sm: 'block' } }}
+              >
+                Hi, {name || 'there'}
+              </Typography>
+
               <IconButton
                 onClick={handleMenuOpen}
                 edge="end"
