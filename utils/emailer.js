@@ -33,7 +33,55 @@ const initTransporter = () => {
   console.log(`SMTP configured: ${process.env.SMTP_HOST}:${process.env.SMTP_PORT || 587}`);
 };
 
+const parseFrom = (from) => {
+  const match = String(from).match(/^(.*)\s+<([^>]+)>$/);
+  if (match) return { name: match[1].trim(), email: match[2] };
+  return { name: '', email: from };
+};
+
+let brevoLogged = false;
+const ensureBrevoLog = () => {
+  if (!brevoLogged) {
+    brevoLogged = true;
+    console.log('Brevo API configured — using HTTP API for email.');
+  }
+};
+
+const sendViaBrevo = async ({ to, subject, text, html }) => {
+  ensureBrevoLog();
+  const from = parseFrom(getFromAddress());
+  try {
+    const res = await fetch('https://api.brevo.com/v3/smtp/email', {
+      method: 'POST',
+      headers: {
+        'api-key': process.env.BREVO_API_KEY,
+        'Content-Type': 'application/json',
+        Accept: 'application/json',
+      },
+      body: JSON.stringify({
+        sender: { name: from.name, email: from.email },
+        to: [{ email: to }],
+        subject,
+        textContent: text,
+        htmlContent: html,
+      }),
+    });
+    if (!res.ok) {
+      const body = await res.text();
+      console.error(`Brevo email error (${res.status}):`, body);
+      return;
+    }
+    console.log(`Email sent to ${to} via Brevo`);
+  } catch (error) {
+    console.error('Error sending email:', error.message);
+  }
+};
+
 const sendEmail = async ({ to, subject, text, html }) => {
+  if (process.env.BREVO_API_KEY) {
+    await sendViaBrevo({ to, subject, text, html });
+    return;
+  }
   initTransporter();
   if (!transporter) {
     console.log('SMTP not configured — skipping email notification.');
