@@ -33,6 +33,11 @@ import LogoutIcon from '@mui/icons-material/Logout';
 import LightModeIcon from '@mui/icons-material/LightMode';
 import DarkModeIcon from '@mui/icons-material/DarkMode';
 import InfoIcon from '@mui/icons-material/Info';
+import GavelIcon from '@mui/icons-material/Gavel';
+import CheckCircleIcon from '@mui/icons-material/CheckCircle';
+import VisibilityIcon from '@mui/icons-material/Visibility';
+import ReportIcon from '@mui/icons-material/Report';
+import HandshakeIcon from '@mui/icons-material/Handshake';
 import SearchIcon from '@mui/icons-material/Search';
 import ChatBubbleIcon from '@mui/icons-material/ChatBubble';
 import { useNavigate } from 'react-router-dom';
@@ -258,8 +263,23 @@ const Header = () => {
 
               <NotificationBell />
 
-              <Tooltip title="Rules & regulations">
-                <IconButton onClick={() => setOpenInfoDialog(true)} color="inherit" aria-label="Rules and info" sx={{ '&:hover': { color: 'primary.main' } }}>
+              <Tooltip title="Rules & regulations" arrow placement="bottom">
+                <IconButton
+                  onClick={() => setOpenInfoDialog(true)}
+                  color="inherit"
+                  aria-label="Rules and info"
+                  sx={{
+                    transition: 'all 0.2s ease',
+                    '&:hover': {
+                      color: 'primary.main',
+                      backgroundColor:
+                        theme.palette.mode === 'light'
+                          ? 'rgba(79, 70, 229, 0.08)'
+                          : 'rgba(129, 140, 248, 0.15)',
+                      transform: 'scale(1.08)',
+                    },
+                  }}
+                >
                   <InfoIcon />
                 </IconButton>
               </Tooltip>
@@ -345,27 +365,87 @@ const Header = () => {
         </Box>
       </AppBar>
 
-      <Dialog open={openInfoDialog} onClose={() => setOpenInfoDialog(false)} fullWidth maxWidth="sm">
-        <DialogTitle>Rules &amp; Regulations</DialogTitle>
-        <DialogContent>
-          <Typography variant="body1" paragraph>
-            Welcome to the Lost and Found app! Please adhere to the following rules:
-          </Typography>
-          {[
-            'Respect other users and their belongings.',
-            'Only post items that you have found or lost.',
-            'Report any inappropriate content to the admin.',
-            'Use the contact options responsibly and cross-check before exchange of items.',
-          ].map((rule, index) => (
-            <Typography variant="body2" key={rule} sx={{ mb: 0.5 }}>
-              {index + 1}. {rule}
+      <Dialog
+        open={openInfoDialog}
+        onClose={() => setOpenInfoDialog(false)}
+        fullWidth
+        maxWidth="sm"
+        PaperProps={{ sx: { borderRadius: 3 } }}
+      >
+        <DialogTitle sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+          <Box
+            sx={{
+              width: 40,
+              height: 40,
+              borderRadius: 2,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              bgcolor: 'primary.main',
+              color: 'primary.contrastText',
+            }}
+          >
+            <GavelIcon />
+          </Box>
+          <Box>
+            <Typography variant="h6" component="div" fontWeight={800}>
+              Rules &amp; Regulations
             </Typography>
+            <Typography variant="caption" color="text.secondary">
+              Keep our campus community safe and honest
+            </Typography>
+          </Box>
+        </DialogTitle>
+        <Divider />
+        <DialogContent sx={{ pt: 3 }}>
+          {[
+            {
+              icon: <HandshakeIcon fontSize="small" />,
+              color: 'success',
+              text: 'Respect other users and their belongings.',
+            },
+            {
+              icon: <VisibilityIcon fontSize="small" />,
+              color: 'info',
+              text: 'Only post items that you have actually found or lost.',
+            },
+            {
+              icon: <ReportIcon fontSize="small" />,
+              color: 'warning',
+              text: 'Report any inappropriate content to the admin.',
+            },
+            {
+              icon: <CheckCircleIcon fontSize="small" />,
+              color: 'primary',
+              text: 'Use the contact options responsibly and cross-check before exchanging items.',
+            },
+          ].map((rule) => (
+            <Box
+              key={rule.text}
+              sx={{
+                display: 'flex',
+                alignItems: 'flex-start',
+                gap: 1.5,
+                mb: 1.5,
+                p: 1.5,
+                borderRadius: 2,
+                backgroundColor:
+                  theme.palette.mode === 'light' ? 'rgba(15, 23, 42, 0.03)' : 'rgba(226, 232, 240, 0.05)',
+              }}
+            >
+              <Avatar sx={{ width: 32, height: 32, bgcolor: `${rule.color}.main`, color: '#fff' }}>
+                {rule.icon}
+              </Avatar>
+              <Typography variant="body2" sx={{ pt: 0.5 }}>
+                {rule.text}
+              </Typography>
+            </Box>
           ))}
-          <Typography variant="body2" sx={{ mt: 1 }}>
+          <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 1 }}>
             By using this app, you agree to abide by these rules.
           </Typography>
         </DialogContent>
-        <DialogActions>
+        <DialogActions sx={{ px: 3, pb: 2 }}>
           <Button onClick={() => setOpenInfoDialog(false)} color="primary">
             Close
           </Button>

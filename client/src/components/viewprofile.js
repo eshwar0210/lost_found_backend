@@ -27,6 +27,10 @@ const ViewProfile = () => {
   const [userDetails, setUserDetails] = useState(null);
   const [posts, setPosts] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [page, setPage] = useState(1);
+  const [hasMore, setHasMore] = useState(false);
+  const [postCount, setPostCount] = useState(0);
 
   useEffect(() => {
     const fetchUserDetails = async () => {
@@ -35,9 +39,18 @@ const ViewProfile = () => {
         const data = await response.json();
         setUserDetails(data);
 
-        const postsResponse = await fetch(`${BASE_URL}/post/user/${userId}`);
+        const postsResponse = await fetch(`${BASE_URL}/post/user/${userId}?page=1&limit=10`);
         const postsData = await postsResponse.json();
-        setPosts([...postsData].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt)));
+        if (Array.isArray(postsData)) {
+          const sorted = [...postsData].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+          setPosts(sorted);
+          setPostCount(sorted.length);
+        } else {
+          setPosts(postsData.docs);
+          setPostCount(postsData.total);
+          setPage(1);
+          setHasMore(postsData.hasMore);
+        }
       } catch (error) {
         console.error('Error fetching user details:', error);
       } finally {
@@ -47,6 +60,25 @@ const ViewProfile = () => {
 
     fetchUserDetails();
   }, [userId]);
+
+  const loadMorePosts = async () => {
+    if (loadingMore) return;
+    setLoadingMore(true);
+    try {
+      const nextPage = page + 1;
+      const response = await fetch(`${BASE_URL}/post/user/${userId}?page=${nextPage}&limit=10`);
+      const data = await response.json();
+      if (!Array.isArray(data)) {
+        setPosts((prev) => [...prev, ...data.docs]);
+        setPage(nextPage);
+        setHasMore(data.hasMore);
+      }
+    } catch (error) {
+      console.error('Error loading more posts:', error);
+    } finally {
+      setLoadingMore(false);
+    }
+  };
 
   if (loading) {
     return (
@@ -89,7 +121,7 @@ const ViewProfile = () => {
             {userDetails.name}
           </Typography>
           <Chip
-            label={`${posts.length} post${posts.length === 1 ? '' : 's'}`}
+            label={`${postCount} post${postCount === 1 ? '' : 's'}`}
             size="small"
             sx={{ mt: 1, mb: 2, bgcolor: 'primary.main', color: '#fff' }}
           />
@@ -131,6 +163,18 @@ const ViewProfile = () => {
           </Box>
         ) : (
           posts.map((post) => <PostComponent key={post._id} post={post} />)
+        )}
+
+        {hasMore && (
+          <Box textAlign="center" py={2}>
+            <Button
+              variant="outlined"
+              onClick={loadMorePosts}
+              disabled={loadingMore}
+            >
+              {loadingMore ? <CircularProgress size={20} /> : 'Load more posts'}
+            </Button>
+          </Box>
         )}
       </Container>
       <Footer />

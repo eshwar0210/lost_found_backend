@@ -2,9 +2,11 @@ import axios from 'axios';
 import { getSocket } from './socket';
 import BASE_URL from '../config';
 
-export const searchUsers = async (q) => {
-  const { data } = await axios.get(`${BASE_URL}/auth/users/search`, { params: { q } });
-  return data;
+export const searchUsers = async (q, page = 1, limit = 20) => {
+  const { data } = await axios.get(`${BASE_URL}/auth/users/search`, {
+    params: { q, page, limit },
+  });
+  return data.docs || data;
 };
 
 export const getOrCreateConversation = async (userA, userB) => {

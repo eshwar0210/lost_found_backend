@@ -1,6 +1,7 @@
 const Notification = require('../models/Notification');
 const User = require('../models/User');
 const { sendNotificationEmail } = require('../utils/emailer');
+const { getPagination, buildPaginationResponse } = require('../utils/pagination');
 
 const createNotification = async ({ recipientUid, fromUid, fromName, type, text, postId, conversationId }) => {
   if (!recipientUid || recipientUid === fromUid) return null;
@@ -54,10 +55,20 @@ const createNotification = async ({ recipientUid, fromUid, fromName, type, text,
 exports.getNotifications = async (req, res) => {
   const uid = req.uid; // Verified user from the auth middleware
   try {
-    const notifications = await Notification.find({ recipientUid: uid })
-      .sort({ createdAt: -1 })
-      .limit(50);
-    res.status(200).json(notifications);
+    const query = { recipientUid: uid };
+
+    // Backward compatibility: no page/limit => return the plain array.
+    if (!req.query.page && !req.query.limit) {
+      const notifications = await Notification.find(query).sort({ createdAt: -1 }).limit(50);
+      return res.status(200).json(notifications);
+    }
+
+    const { page, limit, skip } = getPagination(req, 20);
+    const [notifications, total] = await Promise.all([
+      Notification.find(query).sort({ createdAt: -1 }).skip(skip).limit(limit),
+      Notification.countDocuments(query),
+    ]);
+    res.status(200).json(buildPaginationResponse(notifications, total, page, limit));
   } catch (error) {
     console.error('Error fetching notifications:', error);
     res.status(500).json({ message: 'Server error' });

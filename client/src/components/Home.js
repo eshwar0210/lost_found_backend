@@ -45,6 +45,9 @@ const Home = () => {
   const [snackbarSeverity, setSnackbarSeverity] = useState('success');
   const [loading, setLoading] = useState(false);
   const [feedLoading, setFeedLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [page, setPage] = useState(1);
+  const [hasMore, setHasMore] = useState(false);
   const [filter, setFilter] = useState('all');
   const [search, setSearch] = useState('');
   const uid = localStorage.getItem('uid');
@@ -66,10 +69,16 @@ const Home = () => {
   useEffect(() => {
     const fetchPosts = async () => {
       try {
-        const response = await fetch(`${BASE_URL}/post/`);
+        const response = await fetch(`${BASE_URL}/post/?page=1&limit=10`);
         const data = await response.json();
-        const sorted = [...data].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
-        setPosts(sorted);
+        if (Array.isArray(data)) {
+          const sorted = [...data].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+          setPosts(sorted);
+        } else {
+          setPosts(data.docs);
+          setPage(1);
+          setHasMore(data.hasMore);
+        }
       } catch (error) {
         console.error('Error fetching posts:', error);
       } finally {
@@ -79,6 +88,25 @@ const Home = () => {
 
     fetchPosts();
   }, []);
+
+  const loadMorePosts = async () => {
+    if (loadingMore) return;
+    setLoadingMore(true);
+    try {
+      const nextPage = page + 1;
+      const response = await fetch(`${BASE_URL}/post/?page=${nextPage}&limit=10`);
+      const data = await response.json();
+      if (!Array.isArray(data)) {
+        setPosts((prev) => [...prev, ...data.docs]);
+        setPage(nextPage);
+        setHasMore(data.hasMore);
+      }
+    } catch (error) {
+      console.error('Error loading more posts:', error);
+    } finally {
+      setLoadingMore(false);
+    }
+  };
 
   const handleSubmit = async () => {
     if (!description.trim() && images.length === 0) {
@@ -377,6 +405,18 @@ const Home = () => {
           </Box>
         ) : (
           filteredPosts.map((post) => <PostComponent key={post._id} post={post} />)
+        )}
+
+        {hasMore && (
+          <Box textAlign="center" py={3}>
+            <Button
+              variant="outlined"
+              onClick={loadMorePosts}
+              disabled={loadingMore}
+            >
+              {loadingMore ? <CircularProgress size={20} /> : 'Load more posts'}
+            </Button>
+          </Box>
         )}
 
         <Snackbar

@@ -2,6 +2,7 @@ const { admin } = require('../firebase'); // Import Firebase admin (Auth only)
 const User = require('../models/User'); // Import your User model
 const multer = require('multer');
 const { uploadBuffer, deleteImage } = require('../utils/cloudinary');
+const { getPagination, buildPaginationResponse } = require('../utils/pagination');
 
 const upload = multer();
 
@@ -95,11 +96,26 @@ exports.searchUsers = async (req, res) => {
     const { q } = req.query;
     try {
         const query = q && q.trim() ? { name: { $regex: q.trim(), $options: 'i' } } : {};
-        const users = await User.find(query)
-            .select('uid name profilePhotoUrl email hostelName')
-            .sort({ name: 1 })
-            .limit(30);
-        res.status(200).json(users);
+
+        // Backward compatibility: no page/limit => return the plain array.
+        if (!req.query.page && !req.query.limit) {
+            const users = await User.find(query)
+                .select('uid name profilePhotoUrl email hostelName')
+                .sort({ name: 1 })
+                .limit(30);
+            return res.status(200).json(users);
+        }
+
+        const { page, limit, skip } = getPagination(req, 20);
+        const [users, total] = await Promise.all([
+            User.find(query)
+                .select('uid name profilePhotoUrl email hostelName')
+                .sort({ name: 1 })
+                .skip(skip)
+                .limit(limit),
+            User.countDocuments(query),
+        ]);
+        res.status(200).json(buildPaginationResponse(users, total, page, limit));
     } catch (error) {
         console.error('Error searching users:', error);
         res.status(500).json({ message: 'Server error' });

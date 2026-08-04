@@ -41,6 +41,9 @@ const MyProfile = () => {
   const [editLoading, setEditLoading] = useState(false);
   const [openEditDialog, setOpenEditDialog] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [page, setPage] = useState(1);
+  const [hasMore, setHasMore] = useState(false);
   const [notification, setNotification] = useState({ open: false, message: '', severity: 'success' });
 
   const [openSurveyDialog, setOpenSurveyDialog] = useState(false);
@@ -50,10 +53,17 @@ const MyProfile = () => {
     const uid = localStorage.getItem('uid');
     if (uid) {
       axios
-        .get(`${BASE_URL}/post/user/${uid}`)
+        .get(`${BASE_URL}/post/user/${uid}`, { params: { page: 1, limit: 10 } })
         .then((response) => {
-          const sorted = [...response.data].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
-          setPosts(sorted);
+          const data = response.data;
+          if (Array.isArray(data)) {
+            const sorted = [...data].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+            setPosts(sorted);
+          } else {
+            setPosts(data.docs);
+            setPage(1);
+            setHasMore(data.hasMore);
+          }
         })
         .catch((error) => {
           console.error('Error fetching posts:', error);
@@ -61,6 +71,30 @@ const MyProfile = () => {
         .finally(() => setLoading(false));
     }
   }, []);
+
+  const loadMorePosts = async () => {
+    if (loadingMore) return;
+    setLoadingMore(true);
+    const uid = localStorage.getItem('uid');
+    try {
+      const nextPage = page + 1;
+      const response = await axios.get(`${BASE_URL}/post/user/${uid}`, {
+        params: { page: nextPage, limit: 10 },
+      });
+      const data = response.data;
+      if (!Array.isArray(data)) {
+        setPosts((prev) =>
+          [...prev, ...data.docs].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
+        );
+        setPage(nextPage);
+        setHasMore(data.hasMore);
+      }
+    } catch (error) {
+      console.error('Error loading more posts:', error);
+    } finally {
+      setLoadingMore(false);
+    }
+  };
 
   const handleEditClick = (post) => {
     setSelectedPost(post);
@@ -215,6 +249,18 @@ const MyProfile = () => {
               </Box>
             </Card>
           ))
+        )}
+
+        {hasMore && (
+          <Box textAlign="center" py={2}>
+            <Button
+              variant="outlined"
+              onClick={loadMorePosts}
+              disabled={loadingMore}
+            >
+              {loadingMore ? <CircularProgress size={20} /> : 'Load more posts'}
+            </Button>
+          </Box>
         )}
 
         {/* Edit Post Dialog */}

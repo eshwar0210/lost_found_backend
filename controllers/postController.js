@@ -3,6 +3,7 @@ const multer = require('multer');
 const upload = multer(); // Use multer for handling file uploads
 const { uploadBuffer, deleteImage } = require('../utils/cloudinary');
 const { createNotification } = require('./notificationController');
+const { getPagination, buildPaginationResponse } = require('../utils/pagination');
 
 // Function to upload multiple images
 const uploadImages = async (files) => {
@@ -57,8 +58,22 @@ exports.createPost = async (req, res) => {
 
 exports.getAllPosts = async (req, res) => {
     try {
-        const posts = await Post.find(); // Fetch all posts from the database
-        res.status(200).json(posts);
+        const query = req.query.postType && req.query.postType !== 'all'
+            ? { postType: req.query.postType }
+            : {};
+
+        // Backward compatibility: no page/limit => return the plain array.
+        if (!req.query.page && !req.query.limit) {
+            const posts = await Post.find(query).sort({ createdAt: -1 });
+            return res.status(200).json(posts);
+        }
+
+        const { page, limit, skip } = getPagination(req, 10);
+        const [posts, total] = await Promise.all([
+            Post.find(query).sort({ createdAt: -1 }).skip(skip).limit(limit),
+            Post.countDocuments(query),
+        ]);
+        res.status(200).json(buildPaginationResponse(posts, total, page, limit));
     } catch (error) {
         console.error('Error fetching posts:', error);
         res.status(500).json({ error: 'Error fetching posts' });
@@ -122,8 +137,18 @@ exports.addComment = async (req, res) => {
 exports.getPostsByUserId = async (req, res) => {
     const { uid } = req.params; // Extract user ID from parameters
     try {
-        const posts = await Post.find({ uid }); // Fetch posts with the matching user ID
-        res.json(posts); // Send the fetched posts as a response
+        // Backward compatibility: no page/limit => return the plain array.
+        if (!req.query.page && !req.query.limit) {
+            const posts = await Post.find({ uid }).sort({ createdAt: -1 });
+            return res.json(posts);
+        }
+
+        const { page, limit, skip } = getPagination(req, 10);
+        const [posts, total] = await Promise.all([
+            Post.find({ uid }).sort({ createdAt: -1 }).skip(skip).limit(limit),
+            Post.countDocuments({ uid }),
+        ]);
+        res.status(200).json(buildPaginationResponse(posts, total, page, limit));
     } catch (error) {
         console.error('Error fetching posts:', error);
         res.status(500).json({ message: 'Error fetching posts.' }); // Handle errors
