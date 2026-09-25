@@ -313,14 +313,14 @@ const MyProfile = () => {
               </Button>
               {(keptImages.length > 0 || newImages.length > 0) && (
                 <Box mt={1.5} display="flex" flexWrap="wrap">
-                  {keptImages.map((url) => (
+                  {keptImages.map((url, index) => (
                     <Box
                       key={url}
                       sx={{ position: 'relative', marginRight: 1, marginBottom: 1 }}
                     >
                       <img
                         src={url}
-                        alt="Existing post photo"
+                        alt={`Attached file ${index + 1} of ${keptImages.length}`}
                         style={{ width: '90px', height: '90px', objectFit: 'cover', borderRadius: '10px' }}
                       />
                       <IconButton
@@ -347,7 +347,7 @@ const MyProfile = () => {
                     >
                       <img
                         src={URL.createObjectURL(image)}
-                        alt={`New photo ${index}`}
+                        alt={`New upload ${index + 1}`}
                         style={{ width: '90px', height: '90px', objectFit: 'cover', borderRadius: '10px' }}
                       />
                       <IconButton

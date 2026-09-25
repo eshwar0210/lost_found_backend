@@ -28,7 +28,7 @@ const ImageCarousel = ({ images = [], height = 260 }) => {
         <img
           key={images[activeStep]}
           src={images[activeStep]}
-          alt={`Post image ${activeStep + 1}`}
+          alt={`Item ${activeStep + 1} of ${images.length}`}
           style={{
             width: '100%',
             height,
