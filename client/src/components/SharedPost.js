@@ -4,7 +4,6 @@ import {
   Box,
   Container,
   Typography,
-  Avatar,
   CircularProgress,
   Card,
   Chip,
@@ -17,6 +16,7 @@ import LocationOnIcon from '@mui/icons-material/LocationOn';
 import ScheduleIcon from '@mui/icons-material/Schedule';
 import EmailIcon from '@mui/icons-material/Email';
 import ImageCarousel from './ImageCarousel';
+import UserAvatar from './UserAvatar';
 import { timeAgo } from '../utils/format';
 import BASE_URL from '../config';
 
@@ -126,9 +126,7 @@ const SharedPost = () => {
           <Card sx={{ overflow: 'hidden' }}>
             <Box sx={{ p: { xs: 2.5, sm: 3 } }}>
               <Box display="flex" alignItems="center" mb={2}>
-                <Avatar src={user?.profilePhotoUrl} sx={{ width: 48, height: 48 }}>
-                  {(user?.name || 'U').charAt(0).toUpperCase()}
-                </Avatar>
+                <UserAvatar src={user?.profilePhotoUrl} name={user?.name} sx={{ width: 48, height: 48 }} />
                 <Box ml={1.5} sx={{ flexGrow: 1 }}>
                   <Typography variant="subtitle1" fontWeight={700} lineHeight={1.3}>
                     {user?.name || 'Campus member'}

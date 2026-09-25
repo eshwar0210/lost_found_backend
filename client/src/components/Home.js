@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import {
   Box,
   Container,
-  Avatar,
   Typography,
   Button,
   Dialog,
@@ -13,7 +12,6 @@ import {
   TextField,
   Snackbar,
   Alert,
-  Chip,
   CircularProgress,
   Tooltip,
   Tabs,
@@ -28,6 +26,8 @@ import EditNoteIcon from '@mui/icons-material/EditNote';
 import SearchIcon from '@mui/icons-material/Search';
 import Header from './Header';
 import PostComponent from './Postcomponent';
+import PostCardSkeleton from './PostCardSkeleton';
+import UserAvatar from './UserAvatar';
 import BASE_URL from '../config';
 import { authHeaders } from '../services/api';
 import Footer from './footer';
@@ -52,6 +52,7 @@ const Home = () => {
   const [search, setSearch] = useState('');
   const uid = localStorage.getItem('uid');
   const profilePhoto = localStorage.getItem('profile');
+  const profileName = localStorage.getItem('name');
 
   const handleClickOpen = (type) => {
     if (type) setPostType(type);
@@ -193,8 +194,9 @@ const Home = () => {
           }}
           onClick={() => handleClickOpen()}
         >
-          <Avatar
+          <UserAvatar
             src={profilePhoto}
+            name={profileName}
             sx={{ width: 46, height: 46, border: '2px solid', borderColor: 'primary.light' }}
           />
           <Box sx={{ flexGrow: 1, minWidth: { xs: '100%', sm: 0 }, order: { xs: 2, sm: 0 } }}>
@@ -364,12 +366,12 @@ const Home = () => {
           }}
         >
           <TextField
-            fullWidth
             size="small"
             placeholder="Search by location or description..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            sx={{ flexGrow: 1 }}
+            sx={{ flexGrow: 1, minWidth: 0 }}
+            inputProps={{ 'aria-label': 'Search posts' }}
             InputProps={{
               startAdornment: (
                 <InputAdornment position="start">
@@ -381,7 +383,11 @@ const Home = () => {
           <Tabs
             value={filter}
             onChange={(_, value) => setFilter(value)}
-            sx={{ minHeight: 36, '& .MuiTab-root': { minHeight: 36, py: 0.5 } }}
+            sx={{
+              minHeight: 36,
+              flexShrink: 0,
+              '& .MuiTab-root': { minHeight: 36, py: 0.5 },
+            }}
           >
             <Tab label="All" value="all" />
             <Tab label="Lost" value="lost" />
@@ -391,8 +397,10 @@ const Home = () => {
 
         {/* Feed */}
         {feedLoading ? (
-          <Box display="flex" justifyContent="center" py={8}>
-            <CircularProgress />
+          <Box aria-busy="true" aria-label="Loading posts">
+            {[0, 1, 2].map((i) => (
+              <PostCardSkeleton key={i} />
+            ))}
           </Box>
         ) : filteredPosts.length === 0 ? (
           <Box textAlign="center" py={8} color="text.secondary">

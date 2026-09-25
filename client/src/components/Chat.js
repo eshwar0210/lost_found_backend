@@ -7,11 +7,11 @@ import {
   ListItemAvatar,
   ListItemButton,
   ListItemText,
-  Avatar,
   TextField,
   IconButton,
   CircularProgress,
   Divider,
+  Skeleton,
   InputAdornment,
   Badge,
   Button,
@@ -30,6 +30,7 @@ import CheckIcon from '@mui/icons-material/Check';
 import DoneAllIcon from '@mui/icons-material/DoneAll';
 import ScheduleIcon from '@mui/icons-material/Schedule';
 import Header from './Header';
+import UserAvatar from './UserAvatar';
 import { connectSocket, onSocketEvent } from '../services/socket';
 import {
   getConversations,
@@ -52,6 +53,7 @@ const Chat = () => {
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(true);
+  const [messagesLoading, setMessagesLoading] = useState(false);
   const [onlineUsers, setOnlineUsers] = useState({});
   const [typingUsers, setTypingUsers] = useState({});
   const [initialWith, setInitialWith] = useState(null);
@@ -208,6 +210,7 @@ const Chat = () => {
       setActiveId(conversationId);
       setActiveOther(otherUser);
       setMessages([]);
+      setMessagesLoading(true);
       setMobilePane('chat');
 
       const socket = connectSocket(uid);
@@ -222,6 +225,8 @@ const Chat = () => {
         );
       } catch (error) {
         console.error('Error fetching messages:', error);
+      } finally {
+        setMessagesLoading(false);
       }
       if (preferSelected && inputRef.current) inputRef.current.focus();
     },
@@ -367,8 +372,16 @@ const Chat = () => {
             </Box>
             <Box sx={{ overflowY: 'auto', flexGrow: 1 }}>
               {loading ? (
-                <Box sx={{ display: 'flex', justifyContent: 'center', py: 6 }}>
-                  <CircularProgress size={28} />
+                <Box aria-busy="true" aria-label="Loading conversations">
+                  {[0, 1, 2, 3, 4].map((i) => (
+                    <Box key={i} sx={{ display: 'flex', alignItems: 'center', gap: 1.5, px: 2, py: 1.25 }}>
+                      <Skeleton variant="circular" animation="wave" width={40} height={40} />
+                      <Box sx={{ flexGrow: 1, minWidth: 0 }}>
+                        <Skeleton variant="text" animation="wave" width="55%" height={22} />
+                        <Skeleton variant="text" animation="wave" width="80%" height={18} />
+                      </Box>
+                    </Box>
+                  ))}
                 </Box>
               ) : conversations.length === 0 ? (
                 <Box sx={{ p: 3, textAlign: 'center' }}>
@@ -405,7 +418,10 @@ const Chat = () => {
                               color="success"
                               invisible={!isOnline}
                             >
-                              <Avatar src={conversation.otherUser.profilePhotoUrl} alt={conversation.otherUser.name} />
+                              <UserAvatar
+                                src={conversation.otherUser.profilePhotoUrl}
+                                name={conversation.otherUser.name}
+                              />
                             </Badge>
                           </ListItemAvatar>
                           <ListItemText
@@ -537,7 +553,7 @@ const Chat = () => {
                     color="success"
                     invisible={!otherOnline}
                   >
-                    <Avatar src={activeOther?.profilePhotoUrl} alt={activeOther?.name} sx={{ width: 40, height: 40 }} />
+                    <UserAvatar src={activeOther?.profilePhotoUrl} name={activeOther?.name} sx={{ width: 40, height: 40 }} />
                   </Badge>
                   <Box>
                     <Typography variant="subtitle1" fontWeight={700} lineHeight={1.2}>
@@ -550,7 +566,24 @@ const Chat = () => {
                 </Box>
 
                 <Box ref={messagesBoxRef} sx={{ flexGrow: 1, overflowY: 'auto', px: { xs: 1.5, md: 3 }, py: 2, ...chatBg }}>
-                  {messages.length === 0 ? (
+                  {messagesLoading ? (
+                    <Box aria-busy="true" aria-label="Loading messages">
+                      <Box sx={{ display: 'flex', gap: 1, mb: 1.5, alignItems: 'flex-end' }}>
+                        <Skeleton variant="circular" animation="wave" width={26} height={26} />
+                        <Skeleton variant="rounded" animation="wave" width={170} height={38} sx={{ borderRadius: '14px 14px 14px 4px' }} />
+                      </Box>
+                      <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 1.5 }}>
+                        <Skeleton variant="rounded" animation="wave" width={210} height={38} sx={{ borderRadius: '14px 14px 4px 14px' }} />
+                      </Box>
+                      <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 1.5 }}>
+                        <Skeleton variant="rounded" animation="wave" width={130} height={38} sx={{ borderRadius: '14px 14px 4px 14px' }} />
+                      </Box>
+                      <Box sx={{ display: 'flex', gap: 1, mb: 1.5, alignItems: 'flex-end' }}>
+                        <Skeleton variant="circular" animation="wave" width={26} height={26} />
+                        <Skeleton variant="rounded" animation="wave" width={230} height={38} sx={{ borderRadius: '14px 14px 14px 4px' }} />
+                      </Box>
+                    </Box>
+                  ) : messages.length === 0 ? (
                     <Typography variant="body2" color="text.secondary" sx={{ textAlign: 'center', py: 6 }}>
                       No messages yet. Say hello!
                     </Typography>
@@ -592,10 +625,10 @@ const Chat = () => {
                             }}
                           >
                             {!mine && (
-                              <Avatar
+                              <UserAvatar
                                 src={activeOther?.profilePhotoUrl}
-                                alt={activeOther?.name}
-                                sx={{ width: 26, height: 26, flexShrink: 0, mb: 0.5 }}
+                                name={activeOther?.name}
+                                sx={{ width: 26, height: 26, flexShrink: 0, mb: 0.5, fontSize: '0.8rem' }}
                               />
                             )}
                             <Box
@@ -710,7 +743,7 @@ const Chat = () => {
                 .map((user) => (
                   <ListItemButton key={user.uid} onClick={() => handleStartChat(user)} sx={{ borderRadius: 2 }}>
                     <ListItemAvatar>
-                      <Avatar src={user.profilePhotoUrl} alt={user.name} />
+                      <UserAvatar src={user.profilePhotoUrl} name={user.name} />
                     </ListItemAvatar>
                     <ListItemText
                       primary={<Typography variant="subtitle2" fontWeight={600}>{user.name}</Typography>}

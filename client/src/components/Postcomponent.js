@@ -4,7 +4,6 @@ import {
   Box,
   Typography,
   Card,
-  Avatar,
   Button,
   TextField,
   Collapse,
@@ -12,6 +11,7 @@ import {
   Divider,
   IconButton,
   Chip,
+  Skeleton,
   InputAdornment,
   Tooltip,
   Snackbar,
@@ -29,41 +29,60 @@ import ChatBubbleOutlineIcon from '@mui/icons-material/ChatBubbleOutline';
 import ChatBubbleIcon from '@mui/icons-material/ChatBubble';
 import LinkIcon from '@mui/icons-material/Link';
 import ImageCarousel from './ImageCarousel';
+import UserAvatar from './UserAvatar';
 import { timeAgo } from '../utils/format';
 import { useNavigate } from 'react-router-dom';
-import BASE_URL from '../config';
+import BASE_URL, { mailtoLink } from '../config';
 import { authHeaders } from '../services/api';
 
 const PostComponent = ({ post }) => {
-  const [email, setEmail] = useState('');
-  const [name, setName] = useState('');
-  const [profilePhoto, setProfilePhoto] = useState(null);
+  const [email, setEmail] = useState(post.authorEmail || '');
+  const [name, setName] = useState(post.authorName || '');
+  const [profilePhoto, setProfilePhoto] = useState(post.authorPhotoUrl || null);
   const [comments, setComments] = useState([]);
   const [newComment, setNewComment] = useState('');
   const [showComments, setShowComments] = useState(false);
   const [commentLoading, setCommentLoading] = useState(false);
-  const [loadingUser, setLoadingUser] = useState(true);
+  const [loadingUser, setLoadingUser] = useState(!post.authorName);
   const [editingCommentId, setEditingCommentId] = useState(null);
   const [editedComment, setEditedComment] = useState('');
   const [shareSnackbar, setShareSnackbar] = useState(false);
 
   useEffect(() => {
+    // Posts carry the author inline, so the common case needs no request at
+    // all and the whole card paints in one go. Only fall back to the user
+    // endpoint for posts created before the author fields existed.
+    if (post.authorName) {
+      setName(post.authorName);
+      setProfilePhoto(post.authorPhotoUrl || null);
+      setEmail(post.authorEmail || '');
+      setLoadingUser(false);
+      return undefined;
+    }
+
+    let cancelled = false;
+
     const fetchUser = async () => {
       try {
         const response = await fetch(`${BASE_URL}/auth/user/${post.uid}`);
         const data = await response.json();
+        if (cancelled) return;
         setProfilePhoto(data.profilePhotoUrl);
         setEmail(data.email);
         setName(data.name);
       } catch (error) {
         console.error('Error fetching user:', error);
       } finally {
-        setLoadingUser(false);
+        if (!cancelled) setLoadingUser(false);
       }
     };
 
     fetchUser();
-  }, [post.uid]);
+
+    return () => {
+      cancelled = true;
+    };
+  }, [post.uid, post.authorName, post.authorPhotoUrl, post.authorEmail]);
 
   useEffect(() => {
     setComments(post.comments || []);
@@ -188,14 +207,18 @@ const PostComponent = ({ post }) => {
       }}
     >
       <Box display="flex" alignItems="center" mb={2}>
-        <Avatar
-          src={profilePhoto}
-          alt={name}
-          sx={{ width: 50, height: 50, border: '2px solid', borderColor: 'primary.light' }}
-        />
+        {loadingUser ? (
+          <Skeleton variant="circular" animation="wave" width={50} height={50} />
+        ) : (
+          <UserAvatar
+            src={profilePhoto}
+            name={name}
+            sx={{ width: 50, height: 50, border: '2px solid', borderColor: 'primary.light' }}
+          />
+        )}
         <Box ml={1.5} sx={{ flexGrow: 1, minWidth: 0 }}>
           {loadingUser ? (
-            <CircularProgress size={18} />
+            <Skeleton variant="text" animation="wave" width={150} height={32} />
           ) : (
             <Typography
               variant="subtitle1"
@@ -275,8 +298,9 @@ const PostComponent = ({ post }) => {
         <Button
           variant="contained"
           color="error"
+          disabled={loadingUser}
           startIcon={!isSmallScreen && <EmailIcon />}
-          onClick={() => window.open(`https://mail.google.com/mail/?view=cm&fs=1&to=${email}`, '_blank')}
+          onClick={() => window.open(mailtoLink(email, `Regarding your ${isLost ? 'lost' : 'found'} item`), '_blank', 'noopener,noreferrer')}
           sx={{ flex: 1, borderRadius: 2 }}
         >
           {isSmallScreen ? <EmailIcon /> : 'Email'}

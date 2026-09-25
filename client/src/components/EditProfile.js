@@ -18,13 +18,11 @@ import {
   Card,
   IconButton,
   CircularProgress,
-  useTheme,
 } from '@mui/material';
 import DeleteIcon from '@mui/icons-material/Delete';
 import AddPhotoAlternateIcon from '@mui/icons-material/AddPhotoAlternate';
 import ApartmentIcon from '@mui/icons-material/Apartment';
 import PasswordIcon from '@mui/icons-material/Password';
-import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { getAuth, EmailAuthProvider, reauthenticateWithCredential, updatePassword } from 'firebase/auth';
 import Header from './Header';
@@ -32,7 +30,6 @@ import BASE_URL from '../config';
 import Footer from './footer';
 
 const EditProfile = () => {
-  const theme = useTheme();
   const [selectedImage, setSelectedImage] = useState(null);
   const [preview, setPreview] = useState(localStorage.getItem('profile'));
   const [uploading, setUploading] = useState(false);
@@ -46,7 +43,6 @@ const EditProfile = () => {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [savingHostel, setSavingHostel] = useState(false);
   const [changingPassword, setChangingPassword] = useState(false);
-  const navigate = useNavigate();
 
   const hostels = ['Kalam', 'C.V. Raman', 'Aryabatta', 'Asima'];
 

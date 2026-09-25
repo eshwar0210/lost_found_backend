@@ -3,6 +3,7 @@ import { Box, Container, Paper, Typography, Grid, useTheme } from '@mui/material
 import SearchIcon from '@mui/icons-material/Search';
 import VerifiedUserIcon from '@mui/icons-material/VerifiedUser';
 import EmojiObjectsIcon from '@mui/icons-material/EmojiObjects';
+import { DISCLAIMER_SHORT } from '../constants';
 
 const features = [
   {
@@ -144,6 +145,24 @@ const AuthLayout = ({ title, subtitle, children }) => {
                   </Typography>
                 )}
                 {children}
+
+                <Box
+                  sx={{
+                    mt: 4,
+                    p: 2,
+                    borderRadius: 2,
+                    border: `1px solid ${theme.palette.divider}`,
+                    backgroundColor:
+                      theme.palette.mode === 'light' ? 'rgba(15, 23, 42, 0.02)' : 'rgba(226, 232, 240, 0.04)',
+                  }}
+                >
+                  <Typography variant="caption" fontWeight={700} sx={{ display: 'block', mb: 0.5 }}>
+                    Please note
+                  </Typography>
+                  <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
+                    {DISCLAIMER_SHORT}
+                  </Typography>
+                </Box>
               </Box>
             </Grid>
           </Grid>

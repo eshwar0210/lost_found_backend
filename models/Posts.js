@@ -43,6 +43,17 @@ const postSchema = new mongoose.Schema({
         type: String,
         required: true, // User ID must be associated with the post
     },
+    // Denormalized from User so a post renders in a single request.
+    // Backfilled on read for posts created before these fields existed.
+    authorName: {
+        type: String,
+    },
+    authorPhotoUrl: {
+        type: String,
+    },
+    authorEmail: {
+        type: String,
+    },
     createdAt: {
         type: Date,
         default: Date.now, // Automatically set the date when the post is created

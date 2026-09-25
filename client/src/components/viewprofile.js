@@ -10,7 +10,6 @@ import {
   Chip,
   Divider,
   Button,
-  useTheme,
 } from '@mui/material';
 import EmailIcon from '@mui/icons-material/Email';
 import ApartmentIcon from '@mui/icons-material/Apartment';
@@ -23,7 +22,6 @@ import BASE_URL from '../config';
 const ViewProfile = () => {
   const { userId } = useParams();
   const navigate = useNavigate();
-  const theme = useTheme();
   const [userDetails, setUserDetails] = useState(null);
   const [posts, setPosts] = useState([]);
   const [loading, setLoading] = useState(true);

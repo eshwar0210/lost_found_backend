@@ -4,14 +4,9 @@ import {
   Box,
   Toolbar,
   Typography,
-  Avatar,
   IconButton,
   Menu,
   MenuItem,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
   Button,
   ListItemIcon,
   ListItemText,
@@ -23,27 +18,33 @@ import {
   ListItemAvatar,
   ListItemButton,
   CircularProgress,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  ToggleButton,
+  ToggleButtonGroup,
   useTheme,
 } from '@mui/material';
 import HomeIcon from '@mui/icons-material/Home';
 import PostAddIcon from '@mui/icons-material/PostAdd';
 import ManageAccountsIcon from '@mui/icons-material/ManageAccounts';
-import BASE_URL from '../config';
+import BASE_URL, { ADMIN_EMAIL, mailtoLink } from '../config';
 import LogoutIcon from '@mui/icons-material/Logout';
+import InfoIcon from '@mui/icons-material/Info';
+import SettingsIcon from '@mui/icons-material/Settings';
+import BrightnessAutoIcon from '@mui/icons-material/BrightnessAuto';
 import LightModeIcon from '@mui/icons-material/LightMode';
 import DarkModeIcon from '@mui/icons-material/DarkMode';
-import InfoIcon from '@mui/icons-material/Info';
-import GavelIcon from '@mui/icons-material/Gavel';
-import CheckCircleIcon from '@mui/icons-material/CheckCircle';
-import VisibilityIcon from '@mui/icons-material/Visibility';
-import ReportIcon from '@mui/icons-material/Report';
-import HandshakeIcon from '@mui/icons-material/Handshake';
+import EmailIcon from '@mui/icons-material/Email';
 import SearchIcon from '@mui/icons-material/Search';
 import ChatBubbleIcon from '@mui/icons-material/ChatBubble';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import axios from 'axios';
-import { ColorModeContext } from '../theme';
 import NotificationBell from './NotificationBell';
+import UserAvatar from './UserAvatar';
+import RulesDialog from './RulesDialog';
+import { ColorModeContext } from '../theme';
 import { searchUsers } from '../services/chatService';
 
 const Header = () => {
@@ -51,14 +52,22 @@ const Header = () => {
   const [name, setName] = useState('');
   const [profilePhoto, setProfilePhoto] = useState('');
   const [openInfoDialog, setOpenInfoDialog] = useState(false);
+  const [openSettingsDialog, setOpenSettingsDialog] = useState(false);
   const [searchQ, setSearchQ] = useState('');
   const [searchResults, setSearchResults] = useState([]);
   const [searching, setSearching] = useState(false);
   const [searchFocused, setSearchFocused] = useState(false);
-  const colorMode = useContext(ColorModeContext);
   const theme = useTheme();
+  const colorMode = useContext(ColorModeContext);
   const navigate = useNavigate();
+  const location = useLocation();
   const uid = localStorage.getItem('uid');
+
+  const navItems = [
+    { label: 'Home', to: '/home', icon: <HomeIcon fontSize="small" /> },
+    { label: 'My Posts', to: '/myprofile', icon: <PostAddIcon fontSize="small" /> },
+    { label: 'Messages', to: '/chat', icon: <ChatBubbleIcon fontSize="small" /> },
+  ];
 
   useEffect(() => {
     if (uid) {
@@ -118,6 +127,35 @@ const Header = () => {
     navigate(`/chat?with=${userUid}`);
   };
 
+  const renderNav = (showLabels) => (
+    <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+      {navItems.map((item) => {
+        const active = location.pathname === item.to;
+        const activeBg =
+          theme.palette.mode === 'light' ? 'rgba(79, 70, 229, 0.08)' : 'rgba(129, 140, 248, 0.15)';
+        return (
+          <Button
+            key={item.to}
+            onClick={() => navigate(item.to)}
+            startIcon={showLabels ? item.icon : undefined}
+            aria-label={item.label}
+            aria-current={active ? 'page' : undefined}
+            sx={{
+              minWidth: showLabels ? undefined : 38,
+              px: showLabels ? 1.75 : 1,
+              borderRadius: 5,
+              color: active ? 'primary.main' : 'text.secondary',
+              bgcolor: active ? activeBg : 'transparent',
+              '&:hover': { color: 'primary.main', bgcolor: activeBg },
+            }}
+          >
+            {showLabels ? item.label : item.icon}
+          </Button>
+        );
+      })}
+    </Box>
+  );
+
   const renderSearch = () => (
     <>
       <TextField
@@ -176,7 +214,7 @@ const Header = () => {
                     sx={{ px: 1.5 }}
                   >
                     <ListItemAvatar>
-                      <Avatar src={user.profilePhotoUrl} alt={user.name} sx={{ width: 34, height: 34 }} />
+                      <UserAvatar src={user.profilePhotoUrl} name={user.name} sx={{ width: 34, height: 34 }} />
                     </ListItemAvatar>
                     <ListItemText
                       primary={<Typography variant="body2" fontWeight={600}>{user.name}</Typography>}
@@ -254,13 +292,11 @@ const Header = () => {
               {renderSearch()}
             </Box>
 
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, ml: 'auto' }}>
-              <Tooltip title="Toggle theme">
-                <IconButton onClick={colorMode.toggleColorMode} color="inherit" aria-label="Toggle theme" sx={{ '&:hover': { color: 'primary.main' } }}>
-                  {theme.palette.mode === 'dark' ? <LightModeIcon /> : <DarkModeIcon />}
-                </IconButton>
-              </Tooltip>
+            <Box sx={{ display: { xs: 'none', md: 'flex' }, alignItems: 'center' }}>
+              {renderNav(true)}
+            </Box>
 
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, ml: 'auto' }}>
               <NotificationBell />
 
               <Tooltip title="Rules & regulations" arrow placement="bottom">
@@ -284,13 +320,26 @@ const Header = () => {
                 </IconButton>
               </Tooltip>
 
-              <Typography
-                variant="body2"
-                fontWeight={600}
-                sx={{ mr: 0.5, display: { xs: 'none', sm: 'block' } }}
-              >
-                Hi, {name || 'there'}
-              </Typography>
+              <Tooltip title="Settings" arrow placement="bottom">
+                <IconButton
+                  onClick={() => setOpenSettingsDialog(true)}
+                  color="inherit"
+                  aria-label="Toggle theme and settings"
+                  sx={{
+                    transition: 'all 0.2s ease',
+                    '&:hover': {
+                      color: 'primary.main',
+                      backgroundColor:
+                        theme.palette.mode === 'light'
+                          ? 'rgba(79, 70, 229, 0.08)'
+                          : 'rgba(129, 140, 248, 0.15)',
+                      transform: 'scale(1.08)',
+                    },
+                  }}
+                >
+                  <SettingsIcon />
+                </IconButton>
+              </Tooltip>
 
               <IconButton
                 onClick={handleMenuOpen}
@@ -298,15 +347,12 @@ const Header = () => {
                 aria-label="account of current user"
                 aria-controls="menu-appbar"
                 aria-haspopup="true"
-                sx={{ ml: 0.5 }}
               >
-                {profilePhoto ? (
-                  <Avatar src={profilePhoto} alt={name} sx={{ width: 38, height: 38, border: '2px solid', borderColor: 'primary.light' }} />
-                ) : (
-                  <Avatar sx={{ width: 38, height: 38, bgcolor: 'primary.main', border: '2px solid', borderColor: 'primary.light' }}>
-                    {(name || 'U').charAt(0).toUpperCase()}
-                  </Avatar>
-                )}
+                <UserAvatar
+                  src={profilePhoto}
+                  name={name}
+                  sx={{ width: 38, height: 38, border: '2px solid', borderColor: 'primary.light' }}
+                />
               </IconButton>
             </Box>
           </Box>
@@ -321,11 +367,7 @@ const Header = () => {
             slotProps={{ paper: { sx: { mt: 1, minWidth: 240, borderRadius: 3 } } }}
           >
             <Box sx={{ px: 2, py: 1.5, display: 'flex', alignItems: 'center', gap: 1.5 }}>
-              {profilePhoto ? (
-                <Avatar src={profilePhoto} alt={name} />
-              ) : (
-                <Avatar sx={{ bgcolor: 'primary.main' }}>{(name || 'U').charAt(0).toUpperCase()}</Avatar>
-              )}
+                <UserAvatar src={profilePhoto} name={name} />
               <Box>
                 <Typography variant="subtitle2" fontWeight={700}>
                   {name || 'User'}
@@ -336,18 +378,6 @@ const Header = () => {
               </Box>
             </Box>
             <Divider />
-            <MenuItem onClick={() => goTo('/home')} sx={{ borderRadius: 2, mx: 1 }}>
-              <ListItemIcon><HomeIcon fontSize="small" /></ListItemIcon>
-              <ListItemText>Home</ListItemText>
-            </MenuItem>
-            <MenuItem onClick={() => goTo('/myprofile')} sx={{ borderRadius: 2, mx: 1 }}>
-              <ListItemIcon><PostAddIcon fontSize="small" /></ListItemIcon>
-              <ListItemText>My Posts</ListItemText>
-            </MenuItem>
-            <MenuItem onClick={() => goTo('/chat')} sx={{ borderRadius: 2, mx: 1 }}>
-              <ListItemIcon><ChatBubbleIcon fontSize="small" /></ListItemIcon>
-              <ListItemText>Messages</ListItemText>
-            </MenuItem>
             <MenuItem onClick={() => goTo('/editprofile')} sx={{ borderRadius: 2, mx: 1 }}>
               <ListItemIcon><ManageAccountsIcon fontSize="small" /></ListItemIcon>
               <ListItemText>Edit Profile</ListItemText>
@@ -360,97 +390,86 @@ const Header = () => {
           </Menu>
         </Toolbar>
 
-        <Box sx={{ display: { xs: 'block', md: 'none' }, position: 'relative', px: 1.5, pb: 1.25 }}>
-          {renderSearch()}
+        <Box sx={{ display: { xs: 'block', md: 'none' }, px: 1.5, pb: 1.25 }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            <Box sx={{ flexGrow: 1, minWidth: 0, position: 'relative' }}>{renderSearch()}</Box>
+            {renderNav(false)}
+          </Box>
         </Box>
       </AppBar>
 
       <Dialog
-        open={openInfoDialog}
-        onClose={() => setOpenInfoDialog(false)}
+        open={openSettingsDialog}
+        onClose={() => setOpenSettingsDialog(false)}
         fullWidth
-        maxWidth="sm"
-        PaperProps={{ sx: { borderRadius: 3 } }}
+        maxWidth="xs"
       >
-        <DialogTitle sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-          <Box
-            sx={{
-              width: 40,
-              height: 40,
-              borderRadius: 2,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              bgcolor: 'primary.main',
-              color: 'primary.contrastText',
-            }}
-          >
-            <GavelIcon />
-          </Box>
-          <Box>
-            <Typography variant="h6" component="div" fontWeight={800}>
-              Rules &amp; Regulations
-            </Typography>
-            <Typography variant="caption" color="text.secondary">
-              Keep our campus community safe and honest
-            </Typography>
-          </Box>
-        </DialogTitle>
-        <Divider />
-        <DialogContent sx={{ pt: 3 }}>
-          {[
-            {
-              icon: <HandshakeIcon fontSize="small" />,
-              color: 'success',
-              text: 'Respect other users and their belongings.',
-            },
-            {
-              icon: <VisibilityIcon fontSize="small" />,
-              color: 'info',
-              text: 'Only post items that you have actually found or lost.',
-            },
-            {
-              icon: <ReportIcon fontSize="small" />,
-              color: 'warning',
-              text: 'Report any inappropriate content to the admin.',
-            },
-            {
-              icon: <CheckCircleIcon fontSize="small" />,
-              color: 'primary',
-              text: 'Use the contact options responsibly and cross-check before exchanging items.',
-            },
-          ].map((rule) => (
-            <Box
-              key={rule.text}
-              sx={{
-                display: 'flex',
-                alignItems: 'flex-start',
-                gap: 1.5,
-                mb: 1.5,
-                p: 1.5,
-                borderRadius: 2,
-                backgroundColor:
-                  theme.palette.mode === 'light' ? 'rgba(15, 23, 42, 0.03)' : 'rgba(226, 232, 240, 0.05)',
-              }}
-            >
-              <Avatar sx={{ width: 32, height: 32, bgcolor: `${rule.color}.main`, color: '#fff' }}>
-                {rule.icon}
-              </Avatar>
-              <Typography variant="body2" sx={{ pt: 0.5 }}>
-                {rule.text}
-              </Typography>
-            </Box>
-          ))}
-          <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 1 }}>
-            By using this app, you agree to abide by these rules.
+        <DialogTitle>Settings</DialogTitle>
+        <DialogContent>
+          <Typography variant="body2" color="text.secondary" gutterBottom>
+            Appearance
           </Typography>
+          <ToggleButtonGroup
+            exclusive
+            fullWidth
+            size="small"
+            value={colorMode.preference}
+            onChange={(_, value) => value && colorMode.setPreference(value)}
+            sx={{ mb: 1 }}
+          >
+            <ToggleButton value="system" aria-label="Match system theme">
+              <BrightnessAutoIcon fontSize="small" />
+              <Box component="span" sx={{ ml: 0.5, display: { xs: 'none', sm: 'inline' } }}>
+                System
+              </Box>
+            </ToggleButton>
+            <ToggleButton value="light" aria-label="Light theme">
+              <LightModeIcon fontSize="small" />
+              <Box component="span" sx={{ ml: 0.5, display: { xs: 'none', sm: 'inline' } }}>
+                Light
+              </Box>
+            </ToggleButton>
+            <ToggleButton value="dark" aria-label="Dark theme">
+              <DarkModeIcon fontSize="small" />
+              <Box component="span" sx={{ ml: 0.5, display: { xs: 'none', sm: 'inline' } }}>
+                Dark
+              </Box>
+            </ToggleButton>
+          </ToggleButtonGroup>
+
+          <Divider sx={{ my: 1.5 }} />
+
+          <List disablePadding>
+            <ListItemButton
+              component="a"
+              href={mailtoLink(ADMIN_EMAIL, 'Lost & Found - Support Request')}
+              onClick={() => setOpenSettingsDialog(false)}
+              sx={{ borderRadius: 2 }}
+            >
+              <ListItemIcon>
+                <EmailIcon />
+              </ListItemIcon>
+              <ListItemText primary="Contact admin" secondary={ADMIN_EMAIL} />
+            </ListItemButton>
+            <ListItemButton onClick={() => setOpenInfoDialog(true)} sx={{ borderRadius: 2 }}>
+              <ListItemIcon>
+                <InfoIcon />
+              </ListItemIcon>
+              <ListItemText
+                primary="Rules & disclaimer"
+                secondary="Community guidelines and reporting policy"
+              />
+            </ListItemButton>
+          </List>
         </DialogContent>
-        <DialogActions sx={{ px: 3, pb: 2 }}>
-          <Button onClick={() => setOpenInfoDialog(false)} color="primary">
+        <DialogActions>
+          <Button onClick={() => setOpenSettingsDialog(false)} color="inherit">
             Close
           </Button>
         </DialogActions>
       </Dialog>
+
+      <RulesDialog open={openInfoDialog} onClose={() => setOpenInfoDialog(false)} />
     </>
   );
 };

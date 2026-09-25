@@ -15,7 +15,6 @@ import {
   Chip,
   CircularProgress,
   IconButton,
-  useTheme,
 } from '@mui/material';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
@@ -30,7 +29,6 @@ import { timeAgo } from '../utils/format';
 import BASE_URL from '../config';
 
 const MyProfile = () => {
-  const theme = useTheme();
   const [posts, setPosts] = useState([]);
   const [selectedPost, setSelectedPost] = useState(null);
   const [editContent, setEditContent] = useState('');

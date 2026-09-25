@@ -1,7 +1,8 @@
 import React from 'react';
-import { Box, Typography, IconButton, useTheme } from '@mui/material';
-import EmailIcon from '@mui/icons-material/Email';
+import { Box, Typography, useTheme } from '@mui/material';
 import FavoriteIcon from '@mui/icons-material/Favorite';
+import { ADMIN_EMAIL, mailtoLink } from '../config';
+import { DISCLAIMER_SHORT } from '../constants';
 
 const Footer = () => {
   const theme = useTheme();
@@ -32,17 +33,25 @@ const Footer = () => {
         {'© '}
         {new Date().getFullYear()} Lost &amp; Found. All rights reserved.
       </Typography>
-      <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+      <Typography
+        variant="caption"
+        color="text.secondary"
+        sx={{ maxWidth: 520, textAlign: 'center', opacity: 0.85 }}
+      >
+        {DISCLAIMER_SHORT}
+      </Typography>
+      <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, flexWrap: 'wrap', justifyContent: 'center' }}>
         <Typography variant="body2" color="text.secondary">
           Contact Admin:
         </Typography>
-        <IconButton
-          size="small"
-          aria-label="Contact Admin"
-          onClick={() => window.open('https://mail.google.com/mail/?view=cm&fs=1&to=eshwarrachakonda02@gmail.com', '_blank', 'noopener,noreferrer')}
+        <Typography
+          component="a"
+          href={mailtoLink(ADMIN_EMAIL, 'Lost & Found - Support Request')}
+          variant="body2"
+          sx={{ color: 'primary.main', textDecoration: 'none', fontWeight: 600, '&:hover': { textDecoration: 'underline' } }}
         >
-          <EmailIcon fontSize="small" />
-        </IconButton>
+          {ADMIN_EMAIL}
+        </Typography>
       </Box>
     </Box>
   );

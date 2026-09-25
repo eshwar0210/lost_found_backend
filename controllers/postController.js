@@ -1,4 +1,5 @@
 const Post = require('../models/Posts');
+const User = require('../models/User');
 const multer = require('multer');
 const upload = multer(); // Use multer for handling file uploads
 const { uploadBuffer, deleteImage } = require('../utils/cloudinary');
@@ -11,6 +12,50 @@ const uploadImages = async (files) => {
         return uploadBuffer(file.buffer, { folder: 'posts', mimetype: file.mimetype });
     }));
     return uploadedImageUrls;
+};
+
+// Populate denormalized author fields so the client never needs a second
+// request per post just to render the name/avatar. Posts created before these
+// fields existed are backfilled in place the first time they are read.
+const hydrateAuthors = async (posts) => {
+    const docs = Array.isArray(posts) ? posts : [posts];
+    const missing = docs.filter((post) => post && post.uid && !post.authorName);
+
+    if (missing.length > 0) {
+        const uids = [...new Set(missing.map((post) => post.uid))];
+        const users = await User.find({ uid: { $in: uids } })
+            .select('uid name profilePhotoUrl email')
+            .lean();
+        const byUid = new Map(users.map((user) => [user.uid, user]));
+
+        const updates = [];
+        for (const post of missing) {
+            const user = byUid.get(post.uid);
+            if (!user) continue;
+
+            post.authorName = user.name;
+            post.authorPhotoUrl = user.profilePhotoUrl || null;
+            post.authorEmail = user.email;
+
+            updates.push(
+                Post.updateOne(
+                    { _id: post._id, $or: [{ authorName: { $exists: false } }, { authorName: null }, { authorName: '' }] },
+                    {
+                        $set: {
+                            authorName: user.name,
+                            authorPhotoUrl: user.profilePhotoUrl || null,
+                            authorEmail: user.email,
+                        },
+                    }
+                )
+            );
+        }
+        // allSettled, not all: a transient write failure must not turn a
+        // readable feed into a 500. The in-memory doc is already populated.
+        await Promise.allSettled(updates);
+    }
+
+    return posts;
 };
 
 exports.createPost = async (req, res) => {
@@ -34,12 +79,19 @@ exports.createPost = async (req, res) => {
         // console.log("Uploaded Image URLs:", imageUrls);
 
         // Create a new post document
+        const author = await User.findOne({ uid })
+            .select('name profilePhotoUrl email')
+            .lean();
+
         const newPost = new Post({
             location,
             postType,
             description,
             imageUrls,
             uid,
+            authorName: author && author.name,
+            authorPhotoUrl: (author && author.profilePhotoUrl) || null,
+            authorEmail: author && author.email,
         });
 
         // Save the post in the database
@@ -65,7 +117,7 @@ exports.getAllPosts = async (req, res) => {
         // Backward compatibility: no page/limit => return the plain array.
         if (!req.query.page && !req.query.limit) {
             const posts = await Post.find(query).sort({ createdAt: -1 });
-            return res.status(200).json(posts);
+            return res.status(200).json(await hydrateAuthors(posts));
         }
 
         const { page, limit, skip } = getPagination(req, 10);
@@ -73,7 +125,7 @@ exports.getAllPosts = async (req, res) => {
             Post.find(query).sort({ createdAt: -1 }).skip(skip).limit(limit),
             Post.countDocuments(query),
         ]);
-        res.status(200).json(buildPaginationResponse(posts, total, page, limit));
+        res.status(200).json(buildPaginationResponse(await hydrateAuthors(posts), total, page, limit));
     } catch (error) {
         console.error('Error fetching posts:', error);
         res.status(500).json({ error: 'Error fetching posts' });
@@ -87,7 +139,7 @@ exports.getPostById = async (req, res) => {
         if (!post) {
             return res.status(404).json({ error: 'Post not found' });
         }
-        res.status(200).json(post);
+        res.status(200).json(await hydrateAuthors(post));
     } catch (error) {
         console.error('Error fetching post by id:', error);
         res.status(500).json({ error: 'Server error while fetching post' });
@@ -140,7 +192,7 @@ exports.getPostsByUserId = async (req, res) => {
         // Backward compatibility: no page/limit => return the plain array.
         if (!req.query.page && !req.query.limit) {
             const posts = await Post.find({ uid }).sort({ createdAt: -1 });
-            return res.json(posts);
+            return res.json(await hydrateAuthors(posts));
         }
 
         const { page, limit, skip } = getPagination(req, 10);
@@ -148,7 +200,7 @@ exports.getPostsByUserId = async (req, res) => {
             Post.find({ uid }).sort({ createdAt: -1 }).skip(skip).limit(limit),
             Post.countDocuments({ uid }),
         ]);
-        res.status(200).json(buildPaginationResponse(posts, total, page, limit));
+        res.status(200).json(buildPaginationResponse(await hydrateAuthors(posts), total, page, limit));
     } catch (error) {
         console.error('Error fetching posts:', error);
         res.status(500).json({ message: 'Error fetching posts.' }); // Handle errors

@@ -1,7 +1,11 @@
-import { createContext, useMemo, useState } from 'react';
+import { createContext, useCallback, useEffect, useMemo, useState } from 'react';
 import { createTheme } from '@mui/material/styles';
 
-export const ColorModeContext = createContext({ toggleColorMode: () => {} });
+export const ColorModeContext = createContext({
+  preference: 'system',
+  resolvedMode: 'light',
+  setPreference: () => {},
+});
 
 const getDesignTokens = (mode) => ({
   palette: {
@@ -94,26 +98,43 @@ const getDesignTokens = (mode) => ({
   },
 });
 
+const getSystemMode = () =>
+  window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+
+const readPreference = () => {
+  const saved = localStorage.getItem('themeMode');
+  return saved === 'light' || saved === 'dark' || saved === 'system' ? saved : 'system';
+};
+
 export const useThemeMode = () => {
-  const [mode, setMode] = useState(() => {
-    const saved = localStorage.getItem('themeMode');
-    if (saved === 'light' || saved === 'dark') return saved;
-    return window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches
-      ? 'dark'
-      : 'light';
-  });
+  // `preference` is what the user chose; `systemMode` tracks the OS so a
+  // "system" preference keeps following the device when it flips at dusk.
+  const [preference, setPreferenceState] = useState(readPreference);
+  const [systemMode, setSystemMode] = useState(getSystemMode);
+
+  useEffect(() => {
+    if (!window.matchMedia) return undefined;
+    const query = window.matchMedia('(prefers-color-scheme: dark)');
+    const onChange = (event) => setSystemMode(event.matches ? 'dark' : 'light');
+    // Safari < 14 only has the deprecated addListener/removeListener pair.
+    if (query.addEventListener) {
+      query.addEventListener('change', onChange);
+      return () => query.removeEventListener('change', onChange);
+    }
+    query.addListener(onChange);
+    return () => query.removeListener(onChange);
+  }, []);
+
+  const setPreference = useCallback((next) => {
+    setPreferenceState(next);
+    localStorage.setItem('themeMode', next);
+  }, []);
+
+  const mode = preference === 'system' ? systemMode : preference;
 
   const colorMode = useMemo(
-    () => ({
-      toggleColorMode: () => {
-        setMode((prev) => {
-          const next = prev === 'light' ? 'dark' : 'light';
-          localStorage.setItem('themeMode', next);
-          return next;
-        });
-      },
-    }),
-    []
+    () => ({ preference, resolvedMode: mode, setPreference }),
+    [preference, mode, setPreference]
   );
 
   const theme = useMemo(() => createTheme(getDesignTokens(mode)), [mode]);
